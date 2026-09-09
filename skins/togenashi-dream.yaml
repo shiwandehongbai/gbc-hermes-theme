@@ -1,0 +1,80 @@
+name: togenashi-dream
+description: GIRLS BAND CRY — black, white and Togenashi magenta
+colors:
+  background: '#08080A'
+  banner_border: '#45454D'
+  banner_title: '#F7F7F3'
+  banner_accent: '#ED168C'
+  banner_dim: '#A6A6AD'
+  banner_text: '#F1F1EE'
+  ui_accent: '#ED168C'
+  ui_label: '#F7F7F3'
+  ui_text: '#FFFFFF'
+  ui_border: '#45454D'
+  ui_ok: '#63D297'
+  ui_error: '#F15B68'
+  ui_warn: '#F0B84B'
+  ui_tool: '#ED168C'
+  ui_thinking: '#C3C3C8'
+  diff_added: '#123123'
+  diff_removed: '#3A1524'
+  diff_added_word: '#63D297'
+  diff_removed_word: '#FF7080'
+  syntax_string: '#F0D46B'
+  syntax_number: '#B8E0FF'
+  syntax_keyword: '#FF63B4'
+  syntax_comment: '#85858D'
+  prompt: '#F7F7F3'
+  input_rule: '#ED168C'
+  response_border: '#ED168C'
+  status_bar_bg: '#050507'
+  status_bar_text: '#E1E1E3'
+  status_bar_strong: '#ED168C'
+  status_bar_dim: '#787880'
+  status_bar_good: '#63D297'
+  status_bar_warn: '#F0B84B'
+  status_bar_bad: '#ED7D47'
+  status_bar_critical: '#F15B68'
+  session_label: '#F7F7F3'
+  session_border: '#55555D'
+  voice_status_bg: '#050507'
+  selection_bg: '#541035'
+  completion_menu_bg: '#101014'
+  completion_menu_current_bg: '#4A1032'
+  completion_menu_meta_bg: '#08080A'
+  completion_menu_meta_current_bg: '#24131D'
+  shell_dollar: '#ED168C'
+spinner:
+  waiting_faces:
+    - '[REC]'
+    - '[♪]'
+    - '[◆]'
+    - '[01]'
+  thinking_faces:
+    - '[LIVE]'
+    - '[♪]'
+    - '[◆]'
+    - '[FX]'
+  thinking_verbs:
+    - checking the setlist
+    - tuning the signal
+    - opening the channel
+    - mixing the next track
+  wings:
+    - - ◀♪
+      - ♪▶
+    - - ◀◆
+      - ◆▶
+branding:
+  agent_name: Hermes // TOGENASHI
+  welcome: BACKSTAGE ONLINE — channel 01 ready.
+  goodbye: SET ENDED — see you after the encore.
+  response_label: ' ◆ HERMES / TRACK '
+  prompt_symbol: ◆
+  help_header: TOGENASHI // SETLIST
+tool_prefix: ┃
+tool_emojis:
+  terminal: 🎸
+  web_search: 🎧
+  image_generate: 🎨
+  vision_analyze: 🎬

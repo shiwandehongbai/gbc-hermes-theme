@@ -1,0 +1,15 @@
+﻿/dist/
+__pycache__/
+*.py[cod]
+node_modules/
+.cache/
+.DS_Store
+Thumbs.db
+/AGENTS.md
+/.agents/
+/.codex/
+/.hermes/
+/reference/
+/history/
+/screenshots/
+*.log
