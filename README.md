@@ -2,6 +2,8 @@
 
 [English](README.en.md) · 中文
 
+> **宿主兼容提示 · 2026-09-10：** 已确认一例宿主公共 SDK 加载故障，可导致主题无法加载；上游修复尚未合并，下载 ZIP 未变。请先备份并查看下方[已知宿主问题](#已知宿主问题2026-09-10-快照)。
+
 非官方 **GIRLS BAND CRY / Togenashi Togeari fan theme for Hermes Desktop**。这是 Preview 预览版，不是稳定版，与作品官方、乐队及 Hermes 项目无官方关联。
 
 ## Artwork preview（素材预览）
@@ -64,6 +66,13 @@ hermes config set display.skin togenashi-dream
 已有实机验收环境为 **Windows 10 + Hermes Desktop 0.21.1 本地版本**。macOS / Linux 未实机测试。宿主 DOM、插件 API 或存储行为变化可能导致兼容问题；本版本不保证未来版本兼容。
 
 自动化浏览器测试使用本地 Chromium 和简化 SDK/hook fixture，执行真实插件代码，覆盖三态按钮、存储成功/失败/超时、生命周期、头像与多视口；它不是完整 Hermes React 渲染器，也不等于各平台实机验收。本 Preview 的发布包测试另行验证固定白名单、哈希、解压和图片解码。没有提供新产品截图。
+
+### 已知宿主问题（2026-09-10 快照）
+
+- **症状与原因：** 本地 Windows 10 环境更新至 Hermes 上游 commit `67764dc0863349a384c16425e73ee8571f3a94b7` 后，Desktop package version `0.17.2` 出现公共 SDK 循环依赖导致的生产打包错误。GBC 与另一个磁盘插件同时报 `Cannot convert undefined or null to object`，发生在公共 SDK 加载/导入检查阶段，插件代码尚未执行。GBC 文件和图片未丢失、未修改，本次不是主题 API 适配问题。Hermes Agent 整体版本与 Desktop package 版本不是同一编号；上文 `0.21.1` 是历史验收记录，不能用于推断本次受影响版本范围。
+- **安全建议：** 先备份主题、skin 和设置，核对宿主插件页与日志，并关注上游修复。不要反复重装主题、删除设置或素材、手改压缩 JS，或用空对象兜底。需要本地修复时，请参考上游源码变更及测试，确认所用宿主构建已包含修复后再 Reload 验证；不提供一键补丁。
+- **验证与上游状态：** 本机通过通用的 SDK namespace 延迟读取修复，重建完整宿主 renderer 并 Reload 后，原样 GBC 的壁纸、毛玻璃、五头像与设置恢复，并非重新下载主题解决。见 [上游 issue #107304](https://github.com/NousResearch/hermes-agent/issues/107304)、[修复 PR #107303](https://github.com/NousResearch/hermes-agent/pull/107303) 和 [回归验证配套 PR #107405](https://github.com/NousResearch/hermes-agent/pull/107405)。截至本快照，两个 PR 均为 OPEN、`mergedAt=null`，尚未合并，不能保证升级最新版即可解决。恢复仅有本机实证，不保证所有操作系统或未来版本兼容；上游合并前再次更新或强制重建可能覆盖本地宿主修复。
+- **下载包未变：** 本轮仅更新仓库 `main` 的 README 与在线 Release 说明；`v0.1.0-preview.1` 的版本、tag 和下载附件保持原样，ZIP 不包含宿主修复。ZIP 内 README 仍为原发布内容，最新兼容状态请以仓库 `main` README 和在线 Release 为准。
 
 ## 本地构建与测试
 

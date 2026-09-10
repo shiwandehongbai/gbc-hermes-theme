@@ -1,5 +1,23 @@
 ﻿# v0.1.0-preview.1
 
+## 维护公告 / Maintenance notice · 2026-09-10
+
+本次仅补充仓库 `main` 的中英 README 与本版本在线 Release 说明，以下原发布说明完整保留。`v0.1.0-preview.1` 的版本、tag、插件、素材、skin 和下载附件均不变；ZIP 未重新打包，不包含宿主修复，包内 README 仍为原发布内容。最新兼容状态请查看仓库 `main` 的 [中文 README](README.md#已知宿主问题2026-09-10-快照) 与在线 Release。
+
+本地 Windows 10 更新至 Hermes 上游 commit `67764dc0863349a384c16425e73ee8571f3a94b7` 后，Desktop package version `0.17.2` 出现公共 SDK 循环依赖的生产打包错误。GBC 与另一个磁盘插件在公共 SDK 加载/导入检查阶段报 `Cannot convert undefined or null to object`，插件代码尚未执行，主题文件和图片未丢失、未修改；本次不是主题 API 适配问题。Hermes Agent 整体版本与 Desktop package 版本编号不同，下方历史记录 `0.21.1` 不能用于推断本次受影响版本范围。
+
+本机通过通用的 SDK namespace 延迟读取修复，重建完整宿主 renderer 并 Reload 后，原样 GBC 壁纸、毛玻璃、五头像与设置恢复，非重新下载主题解决。先备份主题、skin 与设置，核对宿主插件页和日志，避免反复重装、删除设置或素材、手改压缩 JS 或空对象兜底。需要本地修复时参考上游源码变更及测试，确认所用宿主构建已包含修复后再 Reload 验证，不提供一键补丁。
+
+上游追踪：[issue #107304](https://github.com/NousResearch/hermes-agent/issues/107304)、[修复 PR #107303](https://github.com/NousResearch/hermes-agent/pull/107303)、[回归验证配套 PR #107405](https://github.com/NousResearch/hermes-agent/pull/107405)。截至本快照，两个 PR 均为 OPEN、`mergedAt=null`，尚未合并，不能承诺升级最新版已解决。恢复仅有本机实证，不保证所有操作系统或未来版本兼容；上游合并前再次更新或强制重建可能覆盖本地宿主修复。
+
+This maintenance update adds bilingual compatibility information only to the repository's `main` READMEs and this version's online Release notes, preserving the original release notes below in full. The `v0.1.0-preview.1` version, tag, plugin, artwork, skin, and download attachments remain unchanged. The ZIP has not been repackaged and does not contain the host fix; its READMEs retain the original release content. For the latest compatibility status, consult the [English README on `main`](README.en.md#known-host-issue-2026-09-10-snapshot) and online Release.
+
+After a local Windows 10 environment updated to Hermes upstream commit `67764dc0863349a384c16425e73ee8571f3a94b7`, Desktop package version `0.17.2` exhibited a production bundling error caused by a circular dependency in the shared SDK. GBC and another disk plugin reported `Cannot convert undefined or null to object` during shared SDK loading/import checks, before plugin code executed. Theme files and images were neither lost nor modified; this was not a theme API adaptation issue. Overall Hermes Agent and Desktop package versions use different numbering; the historical `0.21.1` record below does not establish this incident's affected version range.
+
+A general fix that defers reading the SDK namespace, followed by rebuilding the complete host renderer and Reloading, restored the unchanged GBC wallpaper, glass effects, five portraits, and settings locally. Re-downloading the theme was not the remedy. Back up the theme, skin, and settings first, and check the host's plugin page and logs. Avoid repeated reinstalls, deleting settings or artwork, editing minified JS, or empty-object fallbacks. For a local fix, consult the upstream source changes and tests, confirm that the host build in use includes the fix, then Reload and verify; no one-click patch is provided.
+
+Upstream tracking: [issue #107304](https://github.com/NousResearch/hermes-agent/issues/107304), [fix PR #107303](https://github.com/NousResearch/hermes-agent/pull/107303), and [companion regression verification PR #107405](https://github.com/NousResearch/hermes-agent/pull/107405). As of this snapshot, both PRs are OPEN with `mergedAt=null` and remain unmerged; upgrading to the latest version is not guaranteed to resolve the issue. Recovery is verified only on this local machine, with no guarantee for all operating systems or future versions. Further updates or forced rebuilds before upstream merge may overwrite the local host fix.
+
 ## 中文发布说明
 
 首个含图 Preview：非官方 GIRLS BAND CRY / Togenashi Togeari fan theme for Hermes Desktop，不是稳定版，也无官方关联。
