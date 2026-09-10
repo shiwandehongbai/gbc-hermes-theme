@@ -60,6 +60,12 @@ const CSS = `
   isolation: isolate;
 }
 
+/* Keep settings readable throughout the host's translucency peek lifecycle. */
+:root[data-gbc-workbench] [data-overlay-surface]:has([data-translucency-peek-scope]) {
+  opacity: 1;
+  transition: none;
+}
+
 /* Keep the native veil tint while removing its full-window wallpaper blur. */
 :root[data-gbc-workbench] body::after {
   -webkit-backdrop-filter: none;

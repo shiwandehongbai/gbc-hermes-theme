@@ -177,8 +177,34 @@ test('native intro retains a restrained wordmark and readable nested tagline', (
   }
 });
 
+function assertNoMotion(text) {
+  // Exempt only this exact selector and declaration; inspect all remaining text.
+  const selector = `${root} [data-overlay-surface]:has([data-translucency-peek-scope])`;
+  const guarded = text.replace(/([^{}]+)\{([^{}]*)\}/g, (rule, selectors, body) => {
+    if (selectors.trim() !== selector) return rule;
+    return `${selectors}{${body.replace(/(^|;)\s*transition\s*:\s*none\s*(?=;|$)/g, '$1')}}`;
+  });
+  assert.doesNotMatch(guarded, /!important|animation|transition/);
+}
+
+test('peek motion exception permits only the exact selector and transition none', () => {
+  const selector = `${root} [data-overlay-surface]:has([data-translucency-peek-scope])`;
+  assert.deepEqual(style(selector), { opacity: '1', transition: 'none' });
+  assert.doesNotThrow(() => assertNoMotion(`${selector} { opacity: 1; transition: none; }`));
+  for (const invalid of ['[data-overlay-surface]', `${root} [data-overlay-surface]`,
+    `${selector}:hover`, `${selector}, ${root} div`,
+    selector.replace('[data-gbc-workbench]', '[data-gbc-workbench="reading"]')]) {
+    assert.throws(() => assertNoMotion(`${invalid} { transition: none; }`));
+  }
+  for (const declaration of ['transition: opacity 160ms', 'transition: all 0s',
+    'transition: none !important', 'transition-duration: 0s', 'transition-property: none',
+    'animation: none', '--transition: none', 'transition: none; transition: opacity 1s']) {
+    assert.throws(() => assertNoMotion(`${selector} { ${declaration}; }`));
+  }
+});
+
 test('surface coverage isolates decoration from native message DOM', () => {
-  assert.doesNotMatch(css, /!important|animation|transition/);
+  assertNoMotion(css);
   const runtime = source.replace(/const CSS = `[\s\S]*?`;/, '');
   assert.doesNotMatch(runtime, /innerHTML|outerHTML|insertAdjacent|replaceChildren|\bfetch\s*\(|XMLHttpRequest|WebSocket|requestAnimationFrame|setInterval|\bAudio\b|WebGL/);
   // Only this one-shot storage deadline is exempt. Pin its complete control flow

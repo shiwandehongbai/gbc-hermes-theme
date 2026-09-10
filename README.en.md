@@ -1,8 +1,8 @@
-﻿# GBC Workbench · v0.1.0-preview.1
+﻿# GBC Workbench · v0.1.0-preview.2
 
 English · [中文](README.md)
 
-> **Host compatibility notice · 2026-09-10:** A confirmed host shared SDK loading failure can prevent the theme from loading. The upstream fix remains unmerged, and the download ZIP is unchanged. Back up first and read the [known host issue](#known-host-issue-2026-09-10-snapshot) below.
+> **preview.2:** Fixes the settings overlay fading to 8% during peek while GBC is enabled. It does not include the host SDK fix. The old SDK notice and issue/PR status are a [2026-09-10 known snapshot](#known-host-issue-2026-09-10-snapshot), not newly verified online for this update.
 
 An unofficial **GIRLS BAND CRY / Togenashi Togeari fan theme for Hermes Desktop**. This is a Preview, not a stable release. It has no official affiliation with the franchise, band, or Hermes project.
 
@@ -19,6 +19,16 @@ This is the bundled derivative wallpaper, **not a product screenshot or evidence
 - Consistent colors for the native primary button's idle voice, typed send, and working stop states. Actions, disabled behavior, focus, and icons remain managed by the host.
 - Three modes: 演出 (full-stage) for deliberate display; 工作 (reading, default) balances artwork and reading; 安静 (focus) fades the entire wallpaper. Figures embedded in a composite wallpaper cannot be hidden separately.
 - Local image import, scale and position controls; optional separate background and transparent figure mode. Additional images are not included. The settings UI currently uses Chinese.
+
+## preview.2 fix and safe upgrade
+
+While GBC is enabled, settings overlays containing the host translucency peek scope stay opaque without a fade transition during slider press, hold, release, and keyboard pulses. This applies to full-stage, reading, and focus. Overlays without that scope are unaffected. Disabling or uninstalling the plugin restores the host's original peek behavior.
+
+Window transparency remains available and still affects the entire window, including text; high transparency can still fade everything. Bubble transparency adjusts bubble backgrounds and is different from window transparency. The plugin does not change slider values, the host peek marker, or native window opacity.
+
+To upgrade from preview.1, back up the existing plugin, then replace its `plugin.js` with the preview.2 file. Artwork and skin are unchanged: no settings reset or wallpaper re-import is needed. Hot-reload/rescan the plugin, then verify readable settings during pointer and keyboard adjustment in all three modes, changing slider values, and retained wallpaper. A complete new ZIP is still provided; old `v0.1.0-preview.1` attachments are not rewritten. For a first installation, follow the steps below.
+
+Interaction in all three modes is covered by a Chromium regression fixture running the actual plugin code. The browser fixture does not replace hot-reload and application verification in the user's installed environment. See the corresponding Release page for platform verification scope; macOS / Linux have not been verified in the actual application.
 
 ## Installation and wallpaper selection
 
@@ -72,7 +82,7 @@ Automated browser tests use local Chromium and a simplified SDK/hook fixture to 
 - **Symptoms and cause:** After a local Windows 10 environment updated to Hermes upstream commit `67764dc0863349a384c16425e73ee8571f3a94b7`, Desktop package version `0.17.2` exhibited a production bundling error caused by a circular dependency in the shared SDK. GBC and another disk plugin both reported `Cannot convert undefined or null to object` during shared SDK loading/import checks, before plugin code executed. GBC files and images were neither lost nor modified; this incident was not a theme API adaptation issue. The overall Hermes Agent version and the Desktop package version use different numbering; `0.21.1` above is a historical acceptance record and does not establish the affected version range for this incident.
 - **Safe next steps:** Back up the theme, skin, and settings first, check the host's plugin page and logs, and follow the upstream fix. Avoid repeatedly reinstalling the theme, deleting settings or artwork, editing minified JS, or substituting empty objects as a fallback. If a local fix is needed, consult the upstream source changes and tests, confirm that the host build in use includes the fix, then Reload and verify; no one-click patch is provided.
 - **Verification and upstream status:** A general fix that defers reading the SDK namespace, followed by rebuilding the complete host renderer and Reloading, restored the unchanged GBC wallpaper, glass effects, five portraits, and settings on this machine. Re-downloading the theme was not the remedy. See [upstream issue #107304](https://github.com/NousResearch/hermes-agent/issues/107304), [fix PR #107303](https://github.com/NousResearch/hermes-agent/pull/107303), and [companion regression verification PR #107405](https://github.com/NousResearch/hermes-agent/pull/107405). As of this snapshot, both PRs are OPEN with `mergedAt=null` and remain unmerged; upgrading to the latest version is not guaranteed to resolve the issue. Recovery is verified only on this local machine, with no guarantee for all operating systems or future versions. Further updates or forced rebuilds before upstream merge may overwrite the local host fix.
-- **Download unchanged:** This maintenance update covers only the repository's `main` READMEs and online Release notes. The `v0.1.0-preview.1` version, tag, and download attachments remain unchanged; the ZIP does not contain the host fix. READMEs inside the ZIP retain the original release content. Consult the repository's `main` README and online Release for the latest compatibility status.
+- **Historical SDK maintenance notice:** That update covered only the repository's `main` READMEs and online Release notes. The `v0.1.0-preview.1` version, tag, and attachments remain unchanged, including the original READMEs inside the old ZIP. preview.2 is a new package containing the theme peek fix; neither package contains the host SDK fix.
 
 ## Local build and tests
 

@@ -1,8 +1,8 @@
-﻿# GBC Workbench · v0.1.0-preview.1
+﻿# GBC Workbench · v0.1.0-preview.2
 
 [English](README.en.md) · 中文
 
-> **宿主兼容提示 · 2026-09-10：** 已确认一例宿主公共 SDK 加载故障，可导致主题无法加载；上游修复尚未合并，下载 ZIP 未变。请先备份并查看下方[已知宿主问题](#已知宿主问题2026-09-10-快照)。
+> **preview.2：** 修复 GBC 启用时设置浮层的 8% peek 淡出；不包含宿主 SDK 修复。旧 SDK 公告及 issue/PR 状态仅为 [2026-09-10 已知快照](#已知宿主问题2026-09-10-快照)，本次未重新联网核验。
 
 非官方 **GIRLS BAND CRY / Togenashi Togeari fan theme for Hermes Desktop**。这是 Preview 预览版，不是稳定版，与作品官方、乐队及 Hermes 项目无官方关联。
 
@@ -19,6 +19,16 @@
 - 原生主按钮的空闲语音、输入后发送、工作中停止三态使用一致配色；操作、禁用、焦点和图标仍由宿主管理。
 - 三模式：演出（full-stage）用于主动展示；工作（reading，默认）兼顾壁纸与阅读；安静（focus）淡化整张壁纸。合成壁纸中的人物无法单独隐藏。
 - 本地图片导入、构图缩放和位置调整；可选独立背景与透明人物模式，额外图片不随包提供。设置界面目前为中文。
+
+## preview.2 修复与安全升级
+
+启用 GBC 时，宿主含透明度预览 scope 的设置浮层在拖动、按住、松开滑块及键盘短暂预览（pulse）期间保持不透明，不再降为 8% 或执行淡出过渡。演出、工作、安静三模式均生效；其他不含该 scope 的浮层不受影响。禁用或卸载插件后恢复宿主原有 peek 行为。
+
+“窗口透明”仍可调整，仍会作用于整个窗口，包括文字；透明度过高仍会让整体变淡。“气泡透明”调整的是气泡背景，与窗口透明不同。插件不改滑块数值、宿主预览标记或原生窗口透明度。
+
+从 preview.1 升级：先备份已有插件，再用 preview.2 的 `plugin.js` 替换旧文件。素材和 skin 未变，无需重置设置或重新导入壁纸。通过插件热重载/重新扫描后，验证三模式下滑块拖动和键盘调整时设置可读、数值可变、壁纸仍在。本版本仍提供完整新 ZIP；不重写旧 `v0.1.0-preview.1` 附件。首次安装按下方步骤操作。
+
+三模式交互由执行真实插件代码的 Chromium fixture 回归覆盖；浏览器 fixture 不能替代用户安装环境的热重载与实机确认。平台验证范围详见对应 Release 发布页；macOS / Linux 未实机验证。
 
 ## 安装与壁纸选择
 
@@ -72,7 +82,7 @@ hermes config set display.skin togenashi-dream
 - **症状与原因：** 本地 Windows 10 环境更新至 Hermes 上游 commit `67764dc0863349a384c16425e73ee8571f3a94b7` 后，Desktop package version `0.17.2` 出现公共 SDK 循环依赖导致的生产打包错误。GBC 与另一个磁盘插件同时报 `Cannot convert undefined or null to object`，发生在公共 SDK 加载/导入检查阶段，插件代码尚未执行。GBC 文件和图片未丢失、未修改，本次不是主题 API 适配问题。Hermes Agent 整体版本与 Desktop package 版本不是同一编号；上文 `0.21.1` 是历史验收记录，不能用于推断本次受影响版本范围。
 - **安全建议：** 先备份主题、skin 和设置，核对宿主插件页与日志，并关注上游修复。不要反复重装主题、删除设置或素材、手改压缩 JS，或用空对象兜底。需要本地修复时，请参考上游源码变更及测试，确认所用宿主构建已包含修复后再 Reload 验证；不提供一键补丁。
 - **验证与上游状态：** 本机通过通用的 SDK namespace 延迟读取修复，重建完整宿主 renderer 并 Reload 后，原样 GBC 的壁纸、毛玻璃、五头像与设置恢复，并非重新下载主题解决。见 [上游 issue #107304](https://github.com/NousResearch/hermes-agent/issues/107304)、[修复 PR #107303](https://github.com/NousResearch/hermes-agent/pull/107303) 和 [回归验证配套 PR #107405](https://github.com/NousResearch/hermes-agent/pull/107405)。截至本快照，两个 PR 均为 OPEN、`mergedAt=null`，尚未合并，不能保证升级最新版即可解决。恢复仅有本机实证，不保证所有操作系统或未来版本兼容；上游合并前再次更新或强制重建可能覆盖本地宿主修复。
-- **下载包未变：** 本轮仅更新仓库 `main` 的 README 与在线 Release 说明；`v0.1.0-preview.1` 的版本、tag 和下载附件保持原样，ZIP 不包含宿主修复。ZIP 内 README 仍为原发布内容，最新兼容状态请以仓库 `main` README 和在线 Release 为准。
+- **旧版 SDK 维护公告历史：** 当时仅更新仓库 `main` README 与在线 Release 说明，`v0.1.0-preview.1` 的版本、tag 和附件保持原样，旧 ZIP 内 README 仍为原发布内容。preview.2 是包含主题 peek 修复的新包；新旧包均不包含宿主 SDK 修复。
 
 ## 本地构建与测试
 

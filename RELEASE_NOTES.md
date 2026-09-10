@@ -1,4 +1,30 @@
-﻿# v0.1.0-preview.1
+﻿# v0.1.0-preview.2
+
+## 中文发布说明
+
+修复 GBC 启用时拖动宿主透明度滑块导致整个设置浮层降为 8% 不透明度的问题。一个精确限定的 CSS 规则让含透明度预览 scope 的设置浮层保持 `opacity: 1`，并取消该浮层的过渡，覆盖按下、按住、松开、首次触发与键盘 pulse；演出、工作、安静三模式均生效。其他浮层不受影响，禁用或卸载 GBC 后恢复宿主 peek。
+
+- 窗口透明度仍可调整，仍包括文字，过高仍会整体变淡；气泡透明调整气泡背景，两者不同。不修改滑块数值、原生窗口透明度或宿主 peek 标记。
+- 安全升级：备份已有插件后替换 `plugin.js`，热重载/重新扫描并验证。素材与 skin 未变，无需重置设置或重新导入壁纸。提供完整新 `gbc-workbench.zip`，不重写 preview.1 附件。
+- 自动化回归使用真实插件代码和本地 Chromium SDK/hook fixture，检查三模式生命周期、文字/滑块/数值有效不透明度、稳定几何、其他浮层、chat/scene 与停用恢复；fixture 模拟宿主事件，不是完整 Hermes React 宿主测试。打包测试继续核验固定 12 文件白名单、解压一致性、六图哈希与解码。
+- 浏览器 fixture 不能替代用户安装环境的热重载与完整宿主实机确认。安装后请热重载/重新扫描，检查三模式下拖动与键盘调整时设置可读、数值可变、壁纸保留，以及停用后宿主 peek 恢复。平台验证范围详见对应 Release 发布页；macOS / Linux 未实机验证。无新增产品截图。
+- 本包包含主题修复，不包含宿主 SDK 修复。下方 preview.1 维护公告完整保留，其“附件未变”仅指旧版 SDK 兼容公告。issue/PR 状态仅为 2026-09-10 已知快照，本次未重新联网核验。
+
+安装与权利说明见 [中文 README](README.md)、[RIGHTS.md](RIGHTS.md) 和 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)。
+
+## English release notes
+
+Fixes the entire settings overlay dropping to 8% opacity when adjusting the host transparency slider with GBC enabled. One precisely scoped CSS rule keeps settings overlays containing the translucency peek scope at `opacity: 1` with no transition, covering press, hold, release, first activation, and keyboard pulses in full-stage, reading, and focus. Other overlays are unaffected; disabling or uninstalling GBC restores host peek.
+
+- Window transparency remains adjustable and still includes text; high transparency can fade the entire window. Bubble transparency adjusts bubble backgrounds and is different. Slider values, native window opacity, and the host peek marker are unchanged.
+- Safe upgrade: back up the existing plugin, replace `plugin.js`, then hot-reload/rescan and verify. Artwork and skin are unchanged; no settings reset or wallpaper re-import is needed. A complete new `gbc-workbench.zip` is provided without rewriting preview.1 attachments.
+- Automated regression uses the actual plugin code in a local Chromium SDK/hook fixture to check all three modes, lifecycle, effective text/slider/value opacity, stable geometry, other overlays, chat/scene, and disposal recovery. Fixture events simulate the host; this is not the complete Hermes React host. Packaging tests retain the exact 12-file allowlist, extraction equality, six image hashes, and decoding checks.
+- The browser fixture does not replace hot-reload and full-host application verification in the user's installed environment. After installation, hot-reload/rescan and check readable settings during pointer and keyboard adjustment in all three modes, changing slider values, retained wallpaper, and restored host peek after disabling GBC. See the corresponding Release page for platform verification scope; macOS / Linux have not been verified in the actual application. No new product screenshots.
+- This package contains the theme fix, not the host SDK fix. The preview.1 maintenance notice below is preserved in full; its unchanged-attachments statement applies only to that historical SDK notice. Issue/PR status is a known 2026-09-10 snapshot and was not newly checked online for this update.
+
+See the [English README](README.en.md), [RIGHTS.md](RIGHTS.md), and [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) for installation and rights.
+
+# v0.1.0-preview.1
 
 ## 维护公告 / Maintenance notice · 2026-09-10
 
