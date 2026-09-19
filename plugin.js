@@ -90,7 +90,7 @@ const CSS = `
 :root[data-gbc-workbench] [data-slot="sidebar"] {
   color: var(--gbc-text);
 }
-:root[data-gbc-workbench] [data-slot="sidebar"] button,
+:root[data-gbc-workbench] [data-slot="sidebar"] button:not([data-row-actions] button),
 :root[data-gbc-workbench] [data-slot="sidebar"] [role="tab"],
 :root[data-gbc-workbench] [data-slot="sidebar"] label {
   color: var(--gbc-text);

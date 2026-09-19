@@ -1,4 +1,26 @@
-﻿# v0.1.0-preview.2
+﻿# v0.1.0-preview.3
+
+## 中文发布说明
+
+侧栏通用按钮着色覆盖了宿主 SessionRow 菜单按钮的 `text-transparent`，使绝对定位在时间位置的三点菜单在空闲时也可见，造成重叠。preview.3 仅让这条着色规则避开 `[data-row-actions]` 内的按钮，恢复宿主的空闲、悬停、键盘焦点与菜单打开状态，以及悬停时尾部时间让位；不改变宽度、字体、标题空间或时间内容。preview.2 的设置浮层 peek 修复继续保留。
+
+从 preview.2 安全升级：备份现有插件后，仅替换 preview.3 的 `plugin.js`；素材、skin 和设置不动，无需重新导入壁纸。执行插件 Reload/重新扫描，检查三模式下紧凑会话行和卡片标题的空闲时间、悬停菜单、键盘焦点和菜单打开状态，并确认标题不位移、壁纸及设置仍在。旧版本的 tag、附件和发布记录不重写。
+
+Windows 实机已确认 preview.3 自动热重载生效：当前工作（reading）模式下，空闲时间清晰且不再与三点菜单重叠；点击会话三点按钮可打开原生操作菜单，点击空白关闭后时间恢复，五头像、壁纸与侧栏保留。验证期间未重启应用或 Gateway，也未切换用户活动会话。三模式、compact/card、鼠标悬停、Tab 焦点、模拟菜单 open 标记、停用恢复及六尺寸仍仅由执行真实插件代码的本地无头 Chromium fixture 覆盖；fixture 不是完整 Hermes React/Radix 实机验证，不代表所有模式或键盘交互已在实机通过。macOS / Linux 未测试。历史 SDK 警告继续适用，上游状态本次未重新核验。
+
+## English release notes
+
+The generic sidebar button color overrode the host SessionRow menu button's `text-transparent`, making the three-dot menu visible while idle at its absolute position over the time. preview.3 only excludes buttons inside `[data-row-actions]` from that color rule, restoring host idle, hover, keyboard focus, menu-open states, and the trailing time yielding on hover. Widths, fonts, title space, and time content are unchanged. The preview.2 settings overlay peek fix is retained.
+
+To safely upgrade from preview.2, back up the existing plugin and replace only `plugin.js` with the preview.3 file. Leave artwork, skin, and settings in place; no wallpaper re-import is needed. Reload/rescan the plugin and check idle time, hover menus, keyboard focus, and open menus in compact rows and card headers across all three modes, with stable titles and retained wallpaper/settings. Previous tags, attachments, and release records are not rewritten.
+
+Windows application checks confirmed automatic hot-reload of preview.3 in the current reading mode: idle time is clear with no three-dot menu overlap; clicking the session three-dot button opens the native actions menu, and clicking a blank area closes it and restores the time. All five portraits, wallpaper, and sidebar remain intact. Neither the app nor Gateway was restarted, and the active user session was not switched. Coverage of all three modes, compact/card layouts, mouse hover, Tab focus, a simulated menu-open marker, restoration after disabling the theme, and six viewport sizes remains limited to a local headless Chromium fixture executing the actual plugin code. The fixture is not the complete Hermes React/Radix runtime and does not establish actual application verification of all modes or keyboard interactions. macOS / Linux have not been tested. Historical SDK warnings remain applicable; upstream status was not newly verified.
+
+本补丁不包含宿主 SDK 修复；以下历史发布记录完整保留。
+
+This patch does not include the host SDK fix; historical release records below are preserved in full.
+
+# v0.1.0-preview.2
 
 ## 中文发布说明
 

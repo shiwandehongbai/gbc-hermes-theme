@@ -48,6 +48,59 @@ const peekHostCSS=`@layer base {
  :root[data-hermes-translucency-peek] [data-overlay-surface]:has([data-translucency-peek-scope]) { opacity: 0.08; transition: opacity 160ms cubic-bezier(0.32,0.72,0,1); }
 } #peek-settings{position:fixed;top:40px;left:10px;width:260px;height:100px}#other-overlay{position:fixed;top:40px;right:10px;opacity:.63;transition:opacity 270ms linear}`;
 const peekMarkup='<div id="peek-settings" data-overlay-surface><section data-translucency-peek-scope><label id="peek-text" for="peek-range">Window transparency</label><input id="peek-range" type="range" min="0" max="100" value="40"><output id="peek-value">40</output></section></div><div id="other-overlay" data-overlay-surface>Other overlay</div>';
+// Reduced SessionRow fixture: host utilities stay layered; plugin CSS is unlayered.
+// Synthetic content only. The menu's open marker models Radix, not its portal runtime.
+const sessionHostCSS=`@layer utilities {
+ .session-fixture .text-transparent{color:transparent;background:transparent}
+ .session-fixture .session-row-tail{display:inline-block;min-width:20px;text-align:right;transition:opacity 150ms}
+ .session-fixture .group:hover .session-row-tail{opacity:0}
+ .session-fixture :where(.group):hover .session-row-kebab{color:rgb(130,140,150)}
+ .session-fixture .session-row-kebab:hover,.session-fixture .session-row-kebab:focus-visible,.session-fixture .session-row-kebab[data-state=open]{color:rgb(240,240,240);background:rgb(60,70,80)}
+ .session-fixture .session-row-kebab:focus-visible{outline:0}
+}
+.session-fixture{position:relative;margin-top:150px}
+.session-fixture .row-hover{position:relative;margin:4px;min-height:32px}
+.session-fixture .compact,.session-fixture .card-header{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px}
+.session-fixture .card{padding-block:6px}
+.session-fixture .row-title{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.session-fixture [data-row-actions]{position:relative;display:flex;flex-shrink:0;align-items:center;justify-content:flex-end;gap:4px}
+.session-fixture .figures{pointer-events:none;white-space:nowrap;font-size:10px;line-height:1;color:rgb(130,140,150)}
+.session-fixture time{pointer-events:auto}
+.session-fixture .session-row-kebab{position:absolute;right:0;width:20px;height:20px;padding:0;border:0;border-radius:4px;transition:color 100ms}
+.session-fixture svg{width:14px;height:14px;fill:currentColor}`;
+const sessionActions=id=>`<div data-row-actions><span class="figures"><span class="session-row-tail"><time tabindex="0" datetime="2026-01-01">2h</time></span></span><button id="${id}-kebab" class="session-row-kebab text-transparent" aria-label="Session actions" data-state="closed"><svg viewBox="0 0 14 14"><circle cx="7" cy="3" r="1"/><circle cx="7" cy="7" r="1"/><circle cx="7" cy="11" r="1"/></svg></button></div>`;
+const sessionMarkup=`<section class="session-fixture"><div id="compact" class="compact group row-hover"><span class="row-title">Fixture compact title</span>${sessionActions('compact')}</div><div id="card" class="card group row-hover"><div class="card-header"><span class="row-title">Fixture card header</span>${sessionActions('card')}</div><div>Fixture card body</div></div></section>`;
+async function checkSessionRows(send,sessionId,evaluate){
+ // Wait for rendered transition endpoints, not a wall-clock guess under headless load.
+ const pause=()=>evaluate(`(async()=>{await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));await Promise.all(document.querySelector('.session-fixture').getAnimations({subtree:true}).map(a=>a.finished));})()`);
+ const move=async(x,y)=>{await send('Input.dispatchMouseEvent',{type:'mouseMoved',x,y},sessionId);await pause();};
+ const key=async key=>{await send('Input.dispatchKeyEvent',{type:'keyDown',key,code:key,windowsVirtualKeyCode:9},sessionId);await send('Input.dispatchKeyEvent',{type:'keyUp',key,code:key,windowsVirtualKeyCode:9},sessionId);await pause();};
+ const sample=id=>evaluate(`(()=>{const r=document.getElementById('${id}'),b=r.querySelector('button'),t=r.querySelector('time'),tail=t.parentElement;const box=n=>{const v=n.getBoundingClientRect();return [v.x,v.y,v.width,v.height]};return {color:getComputedStyle(b).color,icon:getComputedStyle(b.querySelector('svg')).fill,tail:Number(getComputedStyle(tail).opacity),time:getComputedStyle(t).visibility,geometry:[r,r.querySelector('.row-title'),r.querySelector('[data-row-actions]'),t,b].map(box),focus:b.matches(':focus-visible'),hover:r.matches(':hover'),buttonHover:b.matches(':hover'),bg:getComputedStyle(b).backgroundColor};})()`);
+ const transparent='rgba(0, 0, 0, 0)',foreground='rgb(240, 240, 240)',tertiary='rgb(130, 140, 150)';
+ for(const mode of [null,'reading','full-stage','focus',null]){
+  await evaluate(`(async()=>{stop();${mode?`saved={mode:'${mode}'};start();while(document.documentElement.getAttribute('data-gbc-workbench')!=='${mode}')await new Promise(r=>setTimeout(r,10));`:''}})()`);
+  for(const id of ['compact','card']){
+   const label=(mode||'host')+' '+id;
+   await move(350,10);await evaluate('document.activeElement.blur()');await pause();
+   const idle=await sample(id);
+   assert.equal(idle.tail,1,label+' idle time visible');assert.equal(idle.time,'visible');
+   assert.equal(idle.icon,transparent,label+' idle time opacity='+idle.tail+'; kebab='+idle.icon+' must be transparent');
+   assert.equal(idle.color,transparent,label+' idle host text-transparent');
+   const t=idle.geometry[3],b=idle.geometry[4];
+   assert.ok(t[0]<b[0]+b[2]&&b[0]<t[0]+t[2],label+' time and absolute kebab share trailing space');
+   const title=idle.geometry[1];await move(title[0]+2,title[1]+title[3]/2);
+   let state=await sample(id);assert.equal(state.hover,true,label+' real row hover');assert.equal(state.tail,0,label+' hover yields time');assert.equal(state.icon,tertiary,label+' group hover host color');assert.deepEqual(state.geometry,idle.geometry,label+' hover geometry stable');
+   await move(b[0]+b[2]/2,b[1]+b[3]/2);state=await sample(id);assert.equal(state.buttonHover,true);assert.equal(state.icon,foreground,label+' button hover');assert.equal(state.bg,'rgb(60, 70, 80)');
+   await move(350,10);
+   // Time immediately precedes the button in tab order; Tab is real CDP keyboard input.
+   await evaluate(`document.querySelector('#${id} time').focus()`);await key('Tab');state=await sample(id);assert.equal(state.focus,true,label+' keyboard focus-visible');assert.equal(state.icon,foreground,label+' keyboard host color');
+   await evaluate(`document.activeElement.blur();document.getElementById('${id}-kebab').dataset.state='open'`);await pause();state=await sample(id);assert.equal(state.focus,false);assert.equal(state.hover,false);assert.equal(state.icon,foreground,label+' open without hover/focus');assert.equal(state.bg,'rgb(60, 70, 80)');
+   await evaluate(`document.getElementById('${id}-kebab').dataset.state='closed'`);await pause();assert.equal((await sample(id)).icon,transparent,label+' closed returns idle');
+  }
+  if(mode)assert.equal(await evaluate("getComputedStyle(document.getElementById('native-nav')).color"),'rgb(244, 241, 243)',mode+' ordinary sidebar button readable');
+ }
+ console.log('Session rows PASS: host, three modes, disposal; compact/card; real hover/Tab, open marker, stable geometry');
+}
 const probe = `
 (async()=>{
  const check=(v,m)=>{if(!v)throw Error(m);};
@@ -166,14 +219,14 @@ const probe = `
  }catch(e){document.body.dataset.result='FAIL: '+e.message;stop();}
 })();`;
 // Three-mode peek includes real 900ms pulses and transition endpoints.
-// Budget for fixture completion, then CDP/pixel checks, across six viewports.
-const fixtureTimeoutMs=20000, browserTimeoutMs=30000, testTimeoutMs=180000;
+// Budget for fixture completion, real SessionRow input/transition checks and pixels across six viewports.
+const fixtureTimeoutMs=20000, browserTimeoutMs=45000, testTimeoutMs=270000;
 test('real Chromium glass transmission, geometry and local roster lifecycle',{timeout:testTimeoutMs},async()=>{
  const browser=[process.env.CHROMIUM_PATH, process.env.CONCERT_TEST_BROWSER, process.env.LOCALAPPDATA&&join(process.env.LOCALAPPDATA,'Google/Chrome/Application/chrome.exe'), process.env.ProgramFiles&&join(process.env.ProgramFiles,'Microsoft/Edge/Application/msedge.exe'), process.env.ProgramFiles&&join(process.env.ProgramFiles,'Google/Chrome/Application/chrome.exe'),process.env['ProgramFiles(x86)']&&join(process.env['ProgramFiles(x86)'],'Microsoft/Edge/Application/msedge.exe'),'/usr/bin/chromium','/usr/bin/chromium-browser','/usr/bin/google-chrome','/Applications/Google Chrome.app/Contents/MacOS/Google Chrome','/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge'].find(p=>p&&existsSync(p));
  assert.ok(browser,'Local Chromium required');
  const dir=mkdtempSync(join(tmpdir(),'gbc-glass-')),file=join(dir,'fixture.html');
  const script=source.replace(/^import .+;\r?\n/gm,'').replace('export default {','const plugin = {');
- writeFileSync(file,`<!doctype html><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'"><style>${voiceHostCSS}${peekHostCSS}body{margin:0}body::after{content:'';position:fixed;inset:0;pointer-events:none;backdrop-filter:blur(6px)}[data-slot=sidebar-wrapper]{display:flex}[data-slot=sidebar]{width:var(--sidebar-width,128px);flex-shrink:0}[data-slot=sidebar-inner]{min-height:calc(100vh - 20px)}main{flex:1;min-width:0}[data-slot=aui_thread-content]{height:240px}textarea{box-sizing:border-box;width:100%}footer{height:20px;box-sizing:border-box;display:flex;align-items:center;justify-content:flex-end}#contribution{display:flex;align-items:center}#native-status{height:18px;flex-shrink:0}button[type=submit]{height:28px;width:28px;background:white;color:white}button[type=submit]:disabled{opacity:.5}button[type=submit]:hover{filter:brightness(.9)}button[type=submit]:focus-visible{outline:2px solid hotpink}.bg-current{display:inline-block;width:10px;height:10px;background:currentColor}[data-slot=tooltip-content]{pointer-events:none;width:110px;position:absolute;top:400px}.box-decoration-clone{box-decoration-break:clone;display:inline;background:#eee;color:#222;padding:4px 6px;font: bold 11px/normal Arial}.box-decoration-clone kbd{color:#222}</style>${peekMarkup}<div data-slot="sidebar-wrapper"><nav data-slot="sidebar"><div data-slot="sidebar-inner"><div data-slot="sidebar-content"><button id="native-nav">Native navigation</button></div></div></nav><main><section data-slot="aui_thread-viewport"><article data-slot="aui_thread-content"><div data-slot="aui_assistant-message-content">Reading<table><tr><td>Table value</td></tr></table></div><div data-slot="aui_user-message-root">User message</div><div data-slot="code-card">code table</div></article></section><div data-slot="composer-root"><div data-slot="composer-surface"><textarea></textarea>${voiceButton("voice")}${voiceButton("disabled-voice","disabled")}<button id="ghost" type="button" class="ghost rounded-full">Ghost</button><button id="microphone" type="button" class="ghost">Mic</button><button id="model" type="button" class="bg-foreground text-background">Model</button><button id="send" type="submit"><i class="codicon codicon-arrow-up"></i></button><button id="disabled-send" type="submit" disabled><i class="codicon codicon-arrow-up"></i></button><button id="stop" type="submit"><span class="bg-current"></span></button></div></div><div data-slot="dropdown-menu-content">menu</div></main></div>${voiceButton("outside-voice")}<footer><button id="native-status">Native</button><div id="contribution"></div></footer><div data-slot="tooltip-content"><span class="box-decoration-clone inline bg-foreground px-1.5 py-1 text-[11px] font-bold leading-normal text-background [font-family:Arial,sans-serif] [&>*]:!inline">Bot</span></div><div data-slot="tooltip-content"><span class="box-decoration-clone inline bg-foreground px-1.5 py-1 text-[11px] font-bold leading-normal text-background [font-family:Arial,sans-serif] [&>*]:!inline">Quota label across multiple lines <kbd>Ctrl K</kbd><span> remaining</span></span></div><script>${adapter}\n${script}\n${probe}</script>`);
+ writeFileSync(file,`<!doctype html><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'"><style>${voiceHostCSS}${peekHostCSS}${sessionHostCSS}body{margin:0}body::after{content:'';position:fixed;inset:0;pointer-events:none;backdrop-filter:blur(6px)}[data-slot=sidebar-wrapper]{display:flex}[data-slot=sidebar]{width:var(--sidebar-width,128px);flex-shrink:0}[data-slot=sidebar-inner]{min-height:calc(100vh - 20px)}main{flex:1;min-width:0}[data-slot=aui_thread-content]{height:240px}textarea{box-sizing:border-box;width:100%}footer{height:20px;box-sizing:border-box;display:flex;align-items:center;justify-content:flex-end}#contribution{display:flex;align-items:center}#native-status{height:18px;flex-shrink:0}button[type=submit]{height:28px;width:28px;background:white;color:white}button[type=submit]:disabled{opacity:.5}button[type=submit]:hover{filter:brightness(.9)}button[type=submit]:focus-visible{outline:2px solid hotpink}.bg-current{display:inline-block;width:10px;height:10px;background:currentColor}[data-slot=tooltip-content]{pointer-events:none;width:110px;position:absolute;top:400px}.box-decoration-clone{box-decoration-break:clone;display:inline;background:#eee;color:#222;padding:4px 6px;font: bold 11px/normal Arial}.box-decoration-clone kbd{color:#222}</style>${peekMarkup}<div data-slot="sidebar-wrapper"><nav data-slot="sidebar"><div data-slot="sidebar-inner"><div data-slot="sidebar-content"><button id="native-nav">Native navigation</button></div>${sessionMarkup}</div></nav><main><section data-slot="aui_thread-viewport"><article data-slot="aui_thread-content"><div data-slot="aui_assistant-message-content">Reading<table><tr><td>Table value</td></tr></table></div><div data-slot="aui_user-message-root">User message</div><div data-slot="code-card">code table</div></article></section><div data-slot="composer-root"><div data-slot="composer-surface"><textarea></textarea>${voiceButton("voice")}${voiceButton("disabled-voice","disabled")}<button id="ghost" type="button" class="ghost rounded-full">Ghost</button><button id="microphone" type="button" class="ghost">Mic</button><button id="model" type="button" class="bg-foreground text-background">Model</button><button id="send" type="submit"><i class="codicon codicon-arrow-up"></i></button><button id="disabled-send" type="submit" disabled><i class="codicon codicon-arrow-up"></i></button><button id="stop" type="submit"><span class="bg-current"></span></button></div></div><div data-slot="dropdown-menu-content">menu</div></main></div>${voiceButton("outside-voice")}<footer><button id="native-status">Native</button><div id="contribution"></div></footer><div data-slot="tooltip-content"><span class="box-decoration-clone inline bg-foreground px-1.5 py-1 text-[11px] font-bold leading-normal text-background [font-family:Arial,sans-serif] [&>*]:!inline">Bot</span></div><div data-slot="tooltip-content"><span class="box-decoration-clone inline bg-foreground px-1.5 py-1 text-[11px] font-bold leading-normal text-background [font-family:Arial,sans-serif] [&>*]:!inline">Quota label across multiple lines <kbd>Ctrl K</kbd><span> remaining</span></span></div><script>${adapter}\n${script}\n${probe}</script>`);
  for(const size of ['1280,800','1600,900','2560,1400','700,900','390,800','1600,600']){
   const child=spawn(browser,['--headless','--disable-gpu','--no-first-run','--no-default-browser-check','--disable-background-networking','--disable-component-update','--disable-sync','--remote-debugging-pipe','--user-data-dir='+join(dir,'profile-'+size.replace(',','-')),'--window-size='+size],{windowsHide:true,stdio:['ignore','ignore','pipe','pipe','pipe']});
   let sequence=0, buffer='', errors='';const requests=new Map();
@@ -204,6 +257,7 @@ test('real Chromium glass transmission, geometry and local roster lifecycle',{ti
    console.log('Measured work geometry '+geometry.result.value);
    assert.equal(result,'PASS',size+': '+result);
    const evaluate=async expression=>(await send('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true},sessionId)).result.value;
+   await checkSessionRows(send,sessionId,evaluate);
    await send('DOM.enable',{},sessionId);await send('CSS.enable',{},sessionId);
    const {root:domRoot}=await send('DOM.getDocument',{},sessionId);
    const {nodeId}=await send('DOM.querySelector',{nodeId:domRoot.nodeId,selector:'#send'},sessionId);

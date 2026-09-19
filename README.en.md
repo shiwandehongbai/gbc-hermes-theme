@@ -1,6 +1,8 @@
-﻿# GBC Workbench · v0.1.0-preview.2
+﻿# GBC Workbench · v0.1.0-preview.3
 
 English · [中文](README.md)
+
+> **preview.3:** Fixes sidebar session time/menu overlap and restores host visibility states; retains the preview.2 fix.
 
 > **preview.2:** Fixes the settings overlay fading to 8% during peek while GBC is enabled. It does not include the host SDK fix. The old SDK notice and issue/PR status are a [2026-09-10 known snapshot](#known-host-issue-2026-09-10-snapshot), not newly verified online for this update.
 
@@ -19,6 +21,14 @@ This is the bundled derivative wallpaper, **not a product screenshot or evidence
 - Consistent colors for the native primary button's idle voice, typed send, and working stop states. Actions, disabled behavior, focus, and icons remain managed by the host.
 - Three modes: 演出 (full-stage) for deliberate display; 工作 (reading, default) balances artwork and reading; 安静 (focus) fades the entire wallpaper. Figures embedded in a composite wallpaper cannot be hidden separately.
 - Local image import, scale and position controls; optional separate background and transparent figure mode. Additional images are not included. The settings UI currently uses Chinese.
+
+## preview.3 fix and safe upgrade
+
+The generic sidebar button color overrode the host SessionRow menu button's `text-transparent`, making the three-dot menu visible while idle at its absolute position over the time. preview.3 only excludes buttons inside `[data-row-actions]` from that color rule, restoring host idle, hover, keyboard focus, menu-open states, and the trailing time yielding on hover. Widths, fonts, title space, and time content are unchanged. The preview.2 settings overlay peek fix is retained.
+
+To safely upgrade from preview.2, back up the existing plugin and replace only `plugin.js` with the preview.3 file. Leave artwork, skin, and settings in place; no wallpaper re-import is needed. Reload/rescan the plugin and check idle time, hover menus, keyboard focus, and open menus in compact rows and card headers across all three modes, with stable titles and retained wallpaper/settings. Previous tags, attachments, and release records are not rewritten.
+
+Windows application checks confirmed automatic hot-reload of preview.3 in the current reading mode: idle time is clear with no three-dot menu overlap; clicking the session three-dot button opens the native actions menu, and clicking a blank area closes it and restores the time. All five portraits, wallpaper, and sidebar remain intact. Neither the app nor Gateway was restarted, and the active user session was not switched. Coverage of all three modes, compact/card layouts, mouse hover, Tab focus, a simulated menu-open marker, restoration after disabling the theme, and six viewport sizes remains limited to a local headless Chromium fixture executing the actual plugin code. The fixture is not the complete Hermes React/Radix runtime and does not establish actual application verification of all modes or keyboard interactions. macOS / Linux have not been tested. Historical SDK warnings remain applicable; upstream status was not newly verified.
 
 ## preview.2 fix and safe upgrade
 

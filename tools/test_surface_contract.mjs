@@ -102,9 +102,10 @@ test('real sidebar navigation uses readable text and an accent active boundary o
   assert.deepEqual(style(`${menu}[data-active="true"]`), {
     'border-inline-start': '2px solid var(--gbc-accent)',
   });
-  for (const control of ['button', '[role="tab"]', 'label']) {
+  for (const control of ['button:not([data-row-actions] button)', '[role="tab"]', 'label']) {
     assert.deepEqual(style(`${sidebar} ${control}`), { color: 'var(--gbc-text)' });
   }
+  assert.ok(!rules.some(rule => rule.selector === `${sidebar} button`), 'row actions retain host colors');
   assert.doesNotMatch(css, /data-slot="sidebar-menu-button"/);
 });
 
