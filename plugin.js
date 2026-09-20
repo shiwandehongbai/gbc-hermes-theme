@@ -60,6 +60,11 @@ const CSS = `
   isolation: isolate;
 }
 
+/* Keep checked switch thumbs opaque over transparent chrome. */
+:root[data-gbc-workbench] [data-slot="switch-thumb"][data-state="checked"] {
+  background-color: var(--gbc-text);
+}
+
 /* Keep settings readable throughout the host's translucency peek lifecycle. */
 :root[data-gbc-workbench] [data-overlay-surface]:has([data-translucency-peek-scope]) {
   opacity: 1;

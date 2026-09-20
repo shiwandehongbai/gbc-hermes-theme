@@ -188,6 +188,22 @@ function assertNoMotion(text) {
   assert.doesNotMatch(guarded, /!important|animation|transition/);
 }
 
+test('checked switch thumb has only a scoped opaque token fill', () => {
+  const selector = `${slot('switch-thumb')}[data-state="checked"]`;
+  const switchRules = rules.filter(rule => /switch/.test(rule.selector));
+  assert.equal(switchRules.length, 1);
+  assert.equal(switchRules[0].selector, selector);
+  const declarations = style(selector);
+  assert.ok(Object.keys(declarations).length > 0);
+  for (const [property, value] of Object.entries(declarations)) {
+    assert.ok(['background', 'background-color'].includes(property), property);
+    assert.equal(value, 'var(--gbc-text)');
+  }
+  assert.equal(style(root)['--gbc-text'], '#f4f1f3');
+  assert.equal(style(root)['--gbc-clear'], 'transparent');
+  assert.equal(style(root)['--ui-bg-chrome'], 'var(--gbc-clear)');
+});
+
 test('peek motion exception permits only the exact selector and transition none', () => {
   const selector = `${root} [data-overlay-surface]:has([data-translucency-peek-scope])`;
   assert.deepEqual(style(selector), { opacity: '1', transition: 'none' });
