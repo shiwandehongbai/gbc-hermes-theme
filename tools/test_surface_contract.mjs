@@ -289,3 +289,10 @@ test('idle voice primary uses the same narrowly scoped color pair as send/stop',
   assert.deepEqual(style(`${slot('composer-surface')} button[type="button"].rounded-full.bg-foreground`),
     style(`${slot('composer-surface')} button[type="submit"]`));
 });
+
+
+test('tree zone painter override requires shell, zone body and protected exclusions', () => {
+  const selector = `${root} [data-contrib-shell] [data-tree-group]:not([data-pane-host]):not([data-pane-host] [data-tree-group]):not([data-glass-opaque]):not([data-glass-opaque] [data-tree-group]):has(> [data-zone-body])`;
+  assert.deepEqual(style(selector), { background: 'var(--gbc-clear)' });
+  assert.deepEqual(rules.filter(r => r.selector.includes('data-tree-group')).map(r => r.selector), [selector]);
+});

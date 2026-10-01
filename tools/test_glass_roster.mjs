@@ -282,9 +282,41 @@ test('real Chromium glass transmission, geometry and local roster lifecycle',{ti
    const shot=async()=>{await send('Runtime.evaluate',{expression:'new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))',awaitPromise:true},sessionId);return (await send('Page.captureScreenshot',{format:'png',clip},sessionId)).data;};
    const red=await shot();await paint('blue');
    assert.notEqual(await shot(),red,'actual glass pixels transmit changed wallpaper');
+   // Reduced v0.21.5 LayoutTreeRoot/TreeGroup fixture: a new zone painter
+   // sits behind the chat, while KeepAlivePaneHost shares the group marker.
+   // Keep the legacy geometry and compare actual pixels with its one-glass baseline.
+   await evaluate(`(()=>{
+    const wrapper=document.querySelector('[data-slot=sidebar-wrapper]');
+    const shell=document.createElement('div');shell.setAttribute('data-contrib-shell','');shell.className='tree-fixture';shell.style.cssText='display:flex;flex:1;min-width:0';
+    const layout=document.createElement('div');layout.style.cssText='display:flex;flex:1;min-width:0';
+    const split=document.createElement('div');split.setAttribute('data-tree-split','fixture-row');split.style.cssText='display:flex;flex:1;min-width:0';
+    const main=wrapper.querySelector('main'),nav=wrapper.querySelector('nav');main.setAttribute('data-chat-surface','');
+    for(const pane of [nav,main]){const group=document.createElement('div');group.setAttribute('data-tree-group',pane===main?'fixture-chat':'fixture-sidebar');group.style.cssText=pane===main?'flex:1;min-width:0':'display:flex';const body=document.createElement('div');body.setAttribute('data-zone-body','');body.style.display='contents';body.append(pane);group.append(body);split.append(group);}
+    layout.append(split);shell.append(layout);wrapper.append(shell);
+    const host=document.createElement('div');host.setAttribute('data-tree-group','fixture-kept');host.setAttribute('data-pane-host','fixture');host.style.cssText='position:fixed;left:-100px;width:10px;height:10px;background:rgb(60,70,80)';layout.append(host);
+    const overlay=document.createElement('div');overlay.setAttribute('data-glass-opaque','');overlay.setAttribute('data-tree-group','fixture-overlay');overlay.style.cssText='position:fixed;left:-100px;width:10px;height:10px;background:rgb(60,70,80)';layout.append(overlay);
+    for(const [id,parent] of [['fixture-nonzone',shell],['fixture-protected-zone',overlay],['fixture-kept-zone',host]]){const group=document.createElement('div');group.id=id;group.setAttribute('data-tree-group',id);group.style.cssText='position:fixed;left:-100px;width:10px;height:10px;background:rgb(60,70,80)';if(parent!==shell){const body=document.createElement('div');body.setAttribute('data-zone-body','');group.append(body);}parent.append(group);}
+    for(const node of [host,overlay]){const body=document.createElement('div');body.setAttribute('data-zone-body','');node.append(body);}
+    const style=document.createElement('style');style.textContent='@layer base{:root{--ui-editor-surface-background:rgb(24,28,36)}}@layer utilities{.tree-fixture [data-tree-group]:not([data-pane-host]):not([data-glass-opaque]){background:var(--ui-editor-surface-background)}}';document.head.append(style);
+   })()`);
+   await paint('red');
+   const treePaint=await evaluate("getComputedStyle(document.querySelector('[data-tree-group=fixture-chat]')).backgroundColor");
+   console.log('LayoutTreeRoot zone painter '+size+': '+treePaint);
+   assert.equal(await shot(),red,'LayoutTreeRoot preserves legacy wallpaper transmission through one work glass layer');
+   assert.equal(treePaint,'rgba(0, 0, 0, 0)','only the new tiling zone painter is cleared');
+   for(const marker of ['data-pane-host','data-glass-opaque'])assert.equal(await evaluate(`getComputedStyle(document.querySelector('[${marker}]')).backgroundColor`),'rgb(60, 70, 80)','keep-alive/opaque counterexample '+marker);
+   for(const id of ['fixture-nonzone','fixture-protected-zone','fixture-kept-zone'])assert.equal(await evaluate(`getComputedStyle(document.getElementById('${id}')).backgroundColor`),'rgb(60, 70, 80)','zone/opaque ancestor protection '+id);
+   await paint('blue');assert.notEqual(await shot(),red,'LayoutTreeRoot wallpaper remains visible');
    await paint('red','focus');const solid=await shot();await paint('blue','focus');
    assert.equal(await shot(),solid,'opaque focus control blocks wallpaper pixels');
+   await paint('red','full-stage');const stage=await shot();await paint('blue','full-stage');
+   // Match the existing full-stage CSS: width OR height triggers the solid safety panel.
+   const [width,height]=size.split(',').map(Number);
+   const solidReasons=[width<=1100?'width <= 1100px':null,height<=650?'height <= 650px':null].filter(Boolean);
+   if(solidReasons.length)assert.equal(await shot(),stage,'full-stage retains solid reading panel: '+solidReasons.join(' or '));
+   else assert.notEqual(await shot(),stage,'LayoutTreeRoot full-stage wallpaper remains visible: width > 1100px and height > 650px');
    await evaluate('stop()');
+   assert.notEqual(await evaluate("getComputedStyle(document.querySelector('[data-tree-group=fixture-chat]')).backgroundColor"),'rgba(0, 0, 0, 0)','dispose restores host zone painter');
   }finally{clearTimeout(deadline);if(!browserExited)await send('Browser.close').catch(()=>{});await exited;}
   console.log('Glass/roster browser PASS '+size);
  }

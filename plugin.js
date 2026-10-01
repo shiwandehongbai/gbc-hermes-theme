@@ -84,6 +84,10 @@ const CSS = `
 :root[data-gbc-workbench] [data-slot="sidebar"] {
   background: var(--gbc-clear);
 }
+/* New tree zones add a painter above the scene; kept panes/opaque surfaces own theirs. */
+:root[data-gbc-workbench] [data-contrib-shell] [data-tree-group]:not([data-pane-host]):not([data-pane-host] [data-tree-group]):not([data-glass-opaque]):not([data-glass-opaque] [data-tree-group]):has(> [data-zone-body]) {
+  background: var(--gbc-clear);
+}
 :root[data-gbc-workbench] [data-slot="sidebar-wrapper"] {
   --sidebar-width: var(--gbc-sidebar-width);
 }
@@ -429,6 +433,32 @@ function readFile(file) {
   });
 }
 
+function backgroundSummary(info) {
+  if (info.phase === 'loading') return '背景：正在读取';
+  if (info.phase === 'error') return info.present ? '背景：有图片 · 加载失败' : '背景：读取失败 · 有无未知';
+  if (info.phase !== 'loaded') return '背景：无图片';
+  return `背景：已加载 · ${info.width} × ${info.height}`;
+}
+// On-demand geometry only. Never return an image URL, text, IDs or arbitrary attributes.
+function sceneDiagnostic(scene, doc = document, computed = getComputedStyle) {
+  const rect = scene.getBoundingClientRect(), style = computed(scene);
+  const slots = ['sidebar-wrapper', 'sidebar-inner', 'sidebar', 'sidebar-content', 'aui_thread-viewport', 'aui_thread-content', 'composer-root', 'composer-surface'];
+  const W = doc.documentElement.clientWidth, H = doc.documentElement.clientHeight;
+  const seen = new Set(), occluders = [];
+  for (const [x, y] of [[W / 2, H / 2], [W / 4, H / 2], [W * .75, H / 2]]) {
+    for (const node of doc.elementsFromPoint(x, y).slice(0, 5)) {
+      if (node === scene || seen.has(node) || occluders.length >= 5) continue;
+      seen.add(node);
+      const slot = node.getAttribute('data-slot');
+      occluders.push({ tag: /^(DIV|MAIN|SECTION|ARTICLE|NAV|ASIDE|BODY|HTML|P|SPAN|BUTTON|TEXTAREA|INPUT|IMG)$/.test(node.tagName) ? node.tagName.toLowerCase() : 'other', slot: slots.includes(slot) ? slot : null });
+    }
+  }
+  const finite = value => Number.isFinite(value) ? Math.round(value) : 0;
+  return { hidden: Boolean(scene.hidden), geometry: { x: finite(rect.x), y: finite(rect.y), width: finite(rect.width), height: finite(rect.height) },
+    backgroundColor: /^(?:rgba?\([\d., %]+\)|transparent)$/.test(style.backgroundColor) ? style.backgroundColor : 'other',
+    hasBackgroundImage: style.backgroundImage !== 'none', occluders };
+}
+
 export default {
   id: 'gbc-workbench', name: 'GBC Workbench',
   register(ctx, clock = globalThis) {
@@ -442,6 +472,7 @@ export default {
     const figure = document.createElement('img'); figure.className = 'gbc-figure'; figure.alt = '';
     canvas.append(background, figure); scene.append(canvas);
     let state = { ...DEFAULTS }, disposed = false, generation = 0, ready = false, busy = false, status = '正在读取本地设置…';
+    let backgroundInfo = { phase: 'loading', present: false };
     const subscribers = new Set(), waits = new Set();
     let writeLock = globalThis[WRITE], waitingWrite = Boolean(writeLock);
     const blocked = () => busy || Boolean(globalThis[WRITE]);
@@ -463,7 +494,7 @@ export default {
       });
     }
     const alive = () => !disposed && globalThis[OWNER] === owner;
-    const notify = () => { if (alive()) subscribers.forEach(fn => fn({ state, ready, busy: blocked(), status })); };
+    const notify = () => { if (alive()) subscribers.forEach(fn => fn({ state, ready, busy: blocked(), status, backgroundInfo })); };
     function geometry() {
       if (!alive()) return;
       const W = window.innerWidth, H = window.innerHeight;
@@ -596,15 +627,16 @@ export default {
         Promise.resolve(operation).then(release, release);
         await storageWait(operation, '保存结果未知：存储超时，底层请求未取消；等待其结束后才能再次保存，可关闭设置继续聊天', () => { waitingWrite = true; });
         if (!alive() || token !== generation) return;
-        state = next; status = reset ? '已重置并清除本地设置' : '已保存到本地'; apply();
+        state = next; backgroundInfo = next.background ? { phase: 'loaded', present: true, width: next.background.width, height: next.background.height } : { phase: 'absent', present: false }; status = reset ? '已重置并清除本地设置' : '已保存到本地'; apply();
       } catch (error) {
-        if (alive() && token === generation) status = waitingWrite ? error.message : '未保存：' + (error?.message || '本地存储不可用');
+        if (alive() && token === generation) status = waitingWrite ? '保存结果未知：存储超时，底层请求未取消；等待其结束后才能再次保存，可关闭设置继续聊天' : '未保存：图片校验或本地存储失败';
       } finally { if (alive() && token === generation) { busy = false; notify(); } }
     }
     function Settings() {
-      const [snapshot, setSnapshot] = useState({ state, ready, busy: blocked(), status });
+      const [snapshot, setSnapshot] = useState({ state, ready, busy: blocked(), status, backgroundInfo });
       const [open, setOpen] = useState(false);
-      useEffect(() => { subscribers.add(setSnapshot); setSnapshot({ state, ready, busy: blocked(), status }); return () => subscribers.delete(setSnapshot); }, []);
+      const [diagnostic, setDiagnostic] = useState(null);
+      useEffect(() => { subscribers.add(setSnapshot); setSnapshot({ state, ready, busy: blocked(), status, backgroundInfo }); return () => subscribers.delete(setSnapshot); }, []);
       const s = snapshot.state, disabled = !snapshot.ready || snapshot.busy || !alive();
       const select = jsx('select', { className: 'gbc-mode-select', 'aria-label': 'GBC 模式', value: s.mode, disabled,
         onChange: e => { if (MODES.includes(e.target.value)) void change({ mode: e.target.value }); },
@@ -617,6 +649,8 @@ export default {
       return jsx('div', { className: 'gbc-status-controls', children: [select, jsx('button', { type: 'button', 'aria-expanded': open, 'aria-controls': 'gbc-settings', onClick: () => setOpen(!open), children: 'GBC 设置' }),
         open && jsx('section', { id: 'gbc-settings', className: 'gbc-settings', 'aria-label': 'GBC 本地设置', onKeyDown: e => { if (e.key === 'Escape') { setOpen(false); e.currentTarget.previousElementSibling?.focus(); } }, children: [
           jsx('p', { children: '本地导入，不上传。默认使用 Hermes 本地合成的单张原人物壁纸，不进行 AI 重绘。默认工作模式以宽幅轻透毛玻璃保护正文和输入，壁纸可透出，代码与表格保持实心可读；演出模式用于主动展示；安静模式淡化整张壁纸，不能单独隐藏画中人物。' }),
+          jsx('p', { 'aria-label': '背景加载状态', 'aria-live': 'polite', children: backgroundSummary(snapshot.backgroundInfo) }),
+          jsx('details', { onToggle: e => { if (e.currentTarget.open && alive()) setDiagnostic(sceneDiagnostic(scene)); }, children: [jsx('summary', { children: '背景布局诊断' }), jsx('pre', { children: diagnostic ? JSON.stringify(diagnostic, null, 2) : '展开时读取布局；重新展开可刷新' })] }),
           field('画面组成', jsx('select', { value: s.artwork, disabled, 'aria-label': '画面组成', onChange: e => void change({ artwork: e.target.value === 'separate-layers' ? 'separate-layers' : 'single-wallpaper' }), children: [jsx('option', { value: 'single-wallpaper', children: '单张合成壁纸（默认）' }), jsx('option', { value: 'separate-layers', children: '独立背景与人物（可选）' })] })),
           ...[['wallpaperScale', '整张壁纸缩放', 100, 150], ['wallpaperX', '整张壁纸水平位置', 0, 100], ['wallpaperY', '整张壁纸垂直位置', 0, 100]].map(([key, label, min, max]) => field(label, jsx('input', { type: 'range', min, max, value: s[key], disabled: disabled || separate, 'aria-label': label, onChange: e => void change({ [key]: bounded(Number(e.target.value), min, max, DEFAULTS[key]) }) }))),
           upload('background', separate ? '全景背景' : '单张合成壁纸', 'image/png,image/jpeg,image/webp'), separate && upload('figure', '透明人物', 'image/png,image/webp'),
@@ -633,8 +667,11 @@ export default {
     }
     async function load() {
       const token = ++generation;
+      let readSucceeded = false;
       try {
         const saved = await storageWait(ctx.storage.get(KEY), '读取超时，未读取成功；迟到结果将忽略');
+        readSucceeded = true;
+        backgroundInfo = { phase: 'absent', present: false };
         const next = { ...DEFAULTS };
         if (saved && typeof saved === 'object') {
           next.artwork = saved.artwork === 'separate-layers' ? 'separate-layers' : 'single-wallpaper';
@@ -643,11 +680,18 @@ export default {
           next.mode = MODES.includes(saved.mode) ? saved.mode : DEFAULTS.mode;
           next.scale = bounded(saved.scale, 30, 60, 50); next.feet = bounded(saved.feet, 50, 85, 78);
           next.preset = saved.preset === 'shenzhen' ? 'shenzhen' : 'text';
-          for (const key of ['background', 'figure']) if (saved[key] != null && (key !== 'figure' || next.artwork === 'separate-layers')) next[key] = await raster(saved[key].url, key === 'figure');
+          for (const key of ['background', 'figure']) if (saved[key] != null && (key !== 'figure' || next.artwork === 'separate-layers')) {
+            if (key === 'background') backgroundInfo = { phase: 'error', present: true };
+            next[key] = await raster(saved[key].url, key === 'figure');
+            if (key === 'background') backgroundInfo = { phase: 'loaded', present: true, width: next[key].width, height: next[key].height };
+          }
         }
         if (!alive() || token !== generation) return;
         state = next; status = '本地设置已就绪';
-      } catch (error) { if (alive() && token === generation) status = '读取失败，使用素色；未覆盖已存设置：' + (error?.message || '存储不可用'); }
+      } catch (error) { if (alive() && token === generation) {
+        backgroundInfo = { phase: 'error', present: readSucceeded && backgroundInfo.present };
+        status = '读取失败，使用素色；未覆盖已存设置：' + (error?.message === '读取超时，未读取成功；迟到结果将忽略' ? '读取超时' : '图片校验或本地存储失败');
+      } }
       finally { if (alive() && token === generation) { ready = true; if (globalThis[WRITE]) status += '；等待此前存储请求结束，暂不可保存，可关闭设置继续聊天'; apply(); } }
     }
     try {

@@ -1,4 +1,5 @@
 import test from 'node:test';
+import {runInNewContext} from 'node:vm';
 import assert from 'node:assert/strict';
 import {readFileSync, existsSync, mkdtempSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
@@ -68,6 +69,7 @@ const probe = `
  const originalText=document.querySelector('[data-slot=aui_thread-content]').textContent;
  start();await wait(ready);open();await wait(()=>control('画面组成'));
  checkVeil('none');
+ check(control('背景加载状态').textContent==='背景：无图片','missing background is explicit');
  const initialMode=control('GBC 模式').value;
  await choose('GBC 模式','reading');
  const rect=slot=>document.querySelector('[data-slot="'+slot+'"]').getBoundingClientRect();
@@ -92,6 +94,11 @@ const probe = `
  check(!button('清除人物'),'single wallpaper cannot claim to clear baked characters');
  await upload('单张合成壁纸',picture());
  check(status().includes('已保存'),'import saved');
+ check(control('背景加载状态').textContent==='背景：已加载 · 1672 × 941','decoded background dimensions');
+ const details=[...document.querySelectorAll('#gbc-settings details')].find(n=>n.querySelector('summary')?.textContent==='背景布局诊断');
+ details.open=true;await new Promise(r=>setTimeout(r,20));
+ const diagnosticText=document.querySelector('#gbc-settings details pre').textContent;
+ check(diagnosticText.includes('geometry')&&!diagnosticText.includes('data:')&&!diagnosticText.includes(originalText),'diagnostic has no asset or message');
  check(getComputedStyle(document.querySelector('.gbc-scene')).backgroundSize==='cover','native cover');
  check(document.querySelector('.gbc-canvas').hidden&&document.querySelector('.gbc-figure').hidden,'no second ensemble');
  await choose('整张壁纸缩放','120');check(document.querySelector('.gbc-scene').style.backgroundSize.endsWith('px auto'),'whole wallpaper aspect scale');
@@ -117,14 +124,19 @@ const probe = `
  check(document.querySelector('[data-slot=aui_thread-content]').textContent===originalText,'message unchanged');
  const a=document.querySelector('[data-slot=aui_thread-content]').getBoundingClientRect(),b=document.querySelector('[data-slot=composer-root]').getBoundingClientRect();check(a.left===b.left&&a.width===b.width,'input aligned');
  if(innerWidth<=1100||innerHeight<=650)check(getComputedStyle(document.querySelector('[data-slot=aui_thread-content]')).backgroundColor==='rgba(25, 38, 57, 0.42)','narrow work retains local glass');
- for(const n of document.querySelectorAll('#gbc-settings input:not(:disabled),#gbc-settings select:not(:disabled),#gbc-settings button:not(:disabled)')){n.focus();check(document.activeElement===n&&n.tabIndex>=0,'native keyboard focusable');}
+ for(const n of document.querySelectorAll('#gbc-settings summary,#gbc-settings input:not(:disabled),#gbc-settings select:not(:disabled),#gbc-settings button:not(:disabled)')){n.focus();check(document.activeElement===n&&n.tabIndex>=0,'native keyboard focusable');}
  control('画面组成').dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));await wait(()=>!control('GBC 本地设置'));
  open();await wait(()=>control('画面组成'));fail='remove';button('重置全部并清除图片').click();await wait(ready);check(status().includes('未保存')&&saved.background,'reset failure retained');fail='';button('重置全部并清除图片').click();await wait(ready);check(saved===null&&document.querySelector('.gbc-scene').hidden&&control('GBC 模式').value==='reading','reset work fallback');
+ check(control('背景加载状态').textContent==='背景：无图片','reset clears load state');
+ const corruptWrites=writes;saved={background:{url:'data:image/png;base64,broken'}};
+ stop();start();await wait(ready);open();await wait(()=>control('背景加载状态'));
+ check(control('背景加载状态').textContent==='背景：有图片 · 加载失败'&&writes===corruptWrites&&saved.background.url==='data:image/png;base64,broken','corrupt saved background reported without overwrite');
+ saved=null;
  // A replaced owner cannot restore its root state or resurrect an async load.
  const old=disposers[0];unmount();start();await wait(ready);old();check(document.querySelectorAll('.gbc-scene').length===1,'re-register unique owner');checkVeil('none');
  stop();check(!document.querySelector('.gbc-scene')&&!document.querySelector('#gbc-workbench-style')&&document.documentElement.getAttribute('data-gbc-workbench')==='original','dispose restores root');checkVeil('blur(6px)');
  let resolve;pendingGet=new Promise(r=>resolve=r);start();stop();resolve({background:{url:picture()}});pendingGet=null;await new Promise(r=>setTimeout(r,80));check(!document.querySelector('.gbc-scene'),'late load cannot revive');
- fail='get';start();await wait(ready);open();await wait(()=>control('画面组成'));check(status().includes('读取失败')&&document.querySelector('.gbc-scene').hidden&&control('GBC 模式').value==='reading','storage read fallback');stop();
+ fail='get';start();await wait(ready);open();await wait(()=>control('画面组成'));check(status().includes('读取失败')&&document.querySelector('.gbc-scene').hidden&&control('GBC 模式').value==='reading','storage read fallback');check(control('背景加载状态').textContent==='背景：读取失败 · 有无未知','storage failure does not claim missing asset');stop();
  fail='';pendingGet=new Promise(()=>{});start();open();await wait(()=>control('画面组成'));expire();await Promise.resolve();await Promise.resolve();
  check(ready()&&status().includes('读取失败')&&status().includes('超时'),'hung get bounded default fallback');stop();check(timers.size===0,'dispose clears read timer');
  let finishGet;pendingGet=new Promise(r=>finishGet=r);start();open();await wait(()=>control('画面组成'));expire();await wait(ready);await choose('GBC 模式','focus');finishGet({mode:'reading'});pendingGet=null;await new Promise(r=>setTimeout(r,20));check(control('GBC 模式').value==='focus','late get cannot overwrite new state');stop();
@@ -178,7 +190,7 @@ test('real Chromium plugin lifecycle, imports, storage, compositions and native 
     while(document.querySelector('[aria-label="GBC 模式"]').disabled)await new Promise(r=>setTimeout(r,10));
     [...document.querySelectorAll('button')].find(n=>n.textContent==='GBC 设置').click();
     await Promise.resolve();
-    const controls=[...document.querySelectorAll('#gbc-settings input:not(:disabled),#gbc-settings select:not(:disabled),#gbc-settings button:not(:disabled)')];
+    const controls=[...document.querySelectorAll('#gbc-settings summary,#gbc-settings input:not(:disabled),#gbc-settings select:not(:disabled),#gbc-settings button:not(:disabled)')];
     controls.forEach((n,i)=>n.dataset.keyboardIndex=String(i));
     [...document.querySelectorAll('button')].find(n=>n.textContent==='GBC 设置').focus();
     return controls.length;
@@ -198,4 +210,34 @@ test('real Chromium plugin lifecycle, imports, storage, compositions and native 
   }finally{clearTimeout(deadline);if(!browserExited)await send('Browser.close').catch(()=>{});await exited;}
   console.log('Plugin browser PASS '+size+' (exact viewport; SDK/hook adapter)');
  }
+});
+
+
+function helper(name) {
+ const code=source.match(new RegExp('function '+name+'\\([^]*?\\n}'))?.[0];
+ assert.ok(code, 'missing '+name);
+ return runInNewContext('('+code+')');
+}
+test('background status and bounded diagnostic expose no asset or user content',()=>{
+ const summary=helper('backgroundSummary');
+ assert.equal(summary({phase:'loading'}),'背景：正在读取');
+ assert.equal(summary({phase:'absent'}),'背景：无图片');
+ assert.equal(summary({phase:'loaded',width:1672,height:941,url:'data:SECRET'}),'背景：已加载 · 1672 × 941');
+ assert.equal(summary({phase:'error',present:true,error:'PRIVATE USER TEXT'}),'背景：有图片 · 加载失败');
+ assert.equal(summary({phase:'error',present:false,error:'PRIVATE USER TEXT'}),'背景：读取失败 · 有无未知');
+ const diagnostic=helper('sceneDiagnostic');
+ const scene={hidden:false,getBoundingClientRect:()=>({x:0,y:0,width:1280,height:800})};
+ const node={tagName:'DIV',getAttribute:key=>{assert.equal(key,'data-slot');return 'aui_thread-content';}};
+ const hostile={tagName:'DIV',getAttribute:()=> 'PRIVATE USER TEXT'};
+ for(const n of [node,hostile,scene])for(const key of ['textContent','innerHTML','src'])Object.defineProperty(n,key,{get(){throw Error('forbidden '+key);}});
+ let calls=0;
+ const doc={documentElement:{clientWidth:1280,clientHeight:800},elementsFromPoint:()=>{calls++;return [node,hostile,...Array(20).fill(node)];}};
+ const result=diagnostic(scene,doc,()=>({backgroundColor:'rgba(0, 0, 0, 0)',backgroundImage:'url(data:SECRET)'}));
+ assert.equal(result.hidden,false);assert.equal(result.geometry.width,1280);
+ assert.equal(result.backgroundColor,'rgba(0, 0, 0, 0)');assert.equal(result.hasBackgroundImage,true);
+ assert.ok(result.occluders.length<=5);assert.ok(calls<=3);
+ assert.doesNotMatch(JSON.stringify(result),/SECRET|PRIVATE|data:|url\(/);
+ assert.match(source,/背景加载状态/);assert.match(source,/背景布局诊断/);
+ const code=source.slice(source.indexOf('function backgroundSummary'),source.indexOf('export default'));
+ assert.doesNotMatch(code,/storage|textContent|innerHTML|\.src|\.url|console/);
 });
