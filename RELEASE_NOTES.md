@@ -1,8 +1,20 @@
-# 2026-10-02 · GBC v2 背景恢复候选（未发布）
+# 2026-10-03 · Bot profile 侧栏文字修复（源码维护版）
+
+侧栏嵌套文字显式读取宿主配色变量，切换 profile 时会变暗；本次仅在 GBC 侧栏内接管五个文字变量，不修改宿主主题、profile 偏好或存储。保留原生三点按钮的空闲透明、hover/focus/open 与停用恢复规则。
+
+完整五文件回归 **21/21 通过，0 失败、0 跳过**，包含 Chromium 三模式、六尺寸、浅/深重绘、菜单状态、停用恢复与打包校验。此前 Worker GPU 沙箱启动失败，随后独立完整运行通过；失败历史保留，不将其当成成功。
+
+Windows Desktop `v0.21.5+5357` 已备份安装应用级插件、执行 Reload，并分别为两个 Bot 在 Desktop 外观页选中 Togenashi-dream。工作模式实机确认：两个 profile 来回切换仍保持浅色可读文字、正文、设置和输入框，壁纸与五头像保留。其它模式和菜单输入矩阵为自动化证据，不声称全部实机通过；macOS/Linux 未测试。
+
+多 Bot 配置说明已补入双语 README：插件应用级共享，但 skin 安装、display.skin 与 Desktop 的每-profile主题选择需分别确认。不要复制插件到 Bot 目录，也不要把打开 Bot 对话当成真正的 profile 切换。仅维护源码和文档，不新建 tag/Release，不替换已有 GitHub ZIP。
+
+The source fix scopes five text tokens to the GBC sidebar without coercing the host theme. The complete suite passed 21/21, including Chromium and package validation. Installation, explicit plugin Reload and actual two-bot profile switching were checked on Windows in reading mode. Each profile also needed its Desktop theme explicitly selected, separate from installing the shared plugin and configuring its skin. Other live interaction matrices and macOS/Linux remain untested. Existing release assets and tags are unchanged.
+
+# 2026-10-02 · GBC v2 背景恢复候选（未发布，历史基线）
 
 新增 owner-scoped tree zone 底色兼容，排除 pane host、opaque 及 opaque 内嵌区域。保留原有三模式、五头像、控件、清除和 dispose。设置增加背景加载状态及按需折叠布局诊断，不输出图片 URL、用户文本或任意属性，不新增 storage，不自动导入素材或覆盖读取失败的数据。存储异常使用固定提示，避免透出外部错误文本。
 
-父端已确认旧插件在 LayoutTreeRoot fixture 中真实 RED：新增区域底色导致实际壁纸透出像素偏离旧布局。此证据证明叠层回归，不证明实机完全不透明只有这一原因。父端已完成执行真实插件代码的完整 Chromium 回归：20/20 通过（fail 0、skip 0），包含加载状态生命周期。候选 plugin.js 生产文件已安装，仓库与生产文件 SHA-256 一致；运行时插件热重载、实机背景效果及壁纸保存后恢复仍未验收，不能据此认定整个问题已完全修复。本次拟同步候选源码，不创建新 tag 或 Release，既有 GitHub ZIP 不更新，暂停动效不恢复。以下历史发布记录保留。
+父端已确认旧插件在 LayoutTreeRoot fixture 中真实 RED：新增区域底色导致实际壁纸透出像素偏离旧布局。此证据证明叠层回归，不证明实机完全不透明只有这一原因。父端已完成该背景基线执行真实插件代码的完整 Chromium 回归：20/20 通过（fail 0、skip 0），包含加载状态生命周期；当时已安装、仓库与生产 plugin.js 哈希一致。这不覆盖 10 月 3 日的侧栏文字候选。运行时插件热重载、实机背景效果及壁纸保存后恢复仍未验收，不能据此认定整个问题已完全修复。不创建新 tag 或 Release，既有 GitHub ZIP 不更新，暂停动效不恢复。以下历史发布记录保留。
 
 ﻿# v0.1.0-preview.3
 

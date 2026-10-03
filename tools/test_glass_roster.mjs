@@ -50,12 +50,15 @@ const peekHostCSS=`@layer base {
 const peekMarkup='<div id="peek-settings" data-overlay-surface><section data-translucency-peek-scope><label id="peek-text" for="peek-range">Window transparency</label><input id="peek-range" type="range" min="0" max="100" value="40"><output id="peek-value">40</output></section></div><div id="other-overlay" data-overlay-surface>Other overlay</div>';
 // Reduced SessionRow fixture: host utilities stay layered; plugin CSS is unlayered.
 // Synthetic content only. The menu's open marker models Radix, not its portal runtime.
-const sessionHostCSS=`@layer utilities {
+const sessionHostCSS=`@layer base {
+ :root{--theme-foreground:#f0f0f0;--ui-base:var(--theme-foreground);--ui-text-primary:color-mix(in srgb,var(--ui-base) 94%,transparent);--ui-text-secondary:color-mix(in srgb,var(--ui-base) 74%,transparent);--ui-text-tertiary:color-mix(in srgb,var(--ui-base) 54%,transparent);--ui-text-quaternary:color-mix(in srgb,var(--ui-base) 36%,transparent);--dt-foreground:var(--ui-text-primary)}
+} @layer utilities {
+ .text-primary{color:var(--ui-text-primary)}.text-secondary{color:var(--ui-text-secondary)}.text-tertiary{color:var(--ui-text-tertiary)}.text-quaternary{color:var(--ui-text-quaternary)}.text-foreground{color:var(--dt-foreground)}
  .session-fixture .text-transparent{color:transparent;background:transparent}
  .session-fixture .session-row-tail{display:inline-block;min-width:20px;text-align:right;transition:opacity 150ms}
  .session-fixture .group:hover .session-row-tail{opacity:0}
- .session-fixture :where(.group):hover .session-row-kebab{color:rgb(130,140,150)}
- .session-fixture .session-row-kebab:hover,.session-fixture .session-row-kebab:focus-visible,.session-fixture .session-row-kebab[data-state=open]{color:rgb(240,240,240);background:rgb(60,70,80)}
+ .session-fixture :where(.group):hover .session-row-kebab{color:var(--ui-text-tertiary)}
+ .session-fixture .session-row-kebab:hover,.session-fixture .session-row-kebab:focus-visible,.session-fixture .session-row-kebab[data-state=open]{color:var(--dt-foreground);background:rgb(60,70,80)}
  .session-fixture .session-row-kebab:focus-visible{outline:0}
 }
 .session-fixture{position:relative;margin-top:150px}
@@ -64,23 +67,44 @@ const sessionHostCSS=`@layer utilities {
 .session-fixture .card{padding-block:6px}
 .session-fixture .row-title{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .session-fixture [data-row-actions]{position:relative;display:flex;flex-shrink:0;align-items:center;justify-content:flex-end;gap:4px}
-.session-fixture .figures{pointer-events:none;white-space:nowrap;font-size:10px;line-height:1;color:rgb(130,140,150)}
+ .session-fixture .figures{pointer-events:none;white-space:nowrap;font-size:10px;line-height:1;color:var(--ui-text-tertiary)}
 .session-fixture time{pointer-events:auto}
 .session-fixture .session-row-kebab{position:absolute;right:0;width:20px;height:20px;padding:0;border:0;border-radius:4px;transition:color 100ms}
 .session-fixture svg{width:14px;height:14px;fill:currentColor}`;
 const sessionActions=id=>`<div data-row-actions><span class="figures"><span class="session-row-tail"><time tabindex="0" datetime="2026-01-01">2h</time></span></span><button id="${id}-kebab" class="session-row-kebab text-transparent" aria-label="Session actions" data-state="closed"><svg viewBox="0 0 14 14"><circle cx="7" cy="3" r="1"/><circle cx="7" cy="7" r="1"/><circle cx="7" cy="11" r="1"/></svg></button></div>`;
-const sessionMarkup=`<section class="session-fixture"><div id="compact" class="compact group row-hover"><span class="row-title">Fixture compact title</span>${sessionActions('compact')}</div><div id="card" class="card group row-hover"><div class="card-header"><span class="row-title">Fixture card header</span>${sessionActions('card')}</div><div>Fixture card body</div></div></section>`;
+const sessionMarkup=`<section class="session-fixture"><div id="compact" class="compact group row-hover"><span class="row-title text-primary">Fixture compact title</span>${sessionActions('compact')}</div><div id="card" class="card group row-hover"><div class="card-header"><span class="row-title text-secondary">Fixture card header</span>${sessionActions('card')}</div><div class="text-tertiary">Fixture card preview</div><div class="text-quaternary">Fixture workspace</div><span class="text-foreground">Fixture foreground glyph</span></div></section>`;
 async function checkSessionRows(send,sessionId,evaluate){
  // Wait for rendered transition endpoints, not a wall-clock guess under headless load.
  const pause=()=>evaluate(`(async()=>{await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));await Promise.all(document.querySelector('.session-fixture').getAnimations({subtree:true}).map(a=>a.finished));})()`);
  const move=async(x,y)=>{await send('Input.dispatchMouseEvent',{type:'mouseMoved',x,y},sessionId);await pause();};
  const key=async key=>{await send('Input.dispatchKeyEvent',{type:'keyDown',key,code:key,windowsVirtualKeyCode:9},sessionId);await send('Input.dispatchKeyEvent',{type:'keyUp',key,code:key,windowsVirtualKeyCode:9},sessionId);await pause();};
  const sample=id=>evaluate(`(()=>{const r=document.getElementById('${id}'),b=r.querySelector('button'),t=r.querySelector('time'),tail=t.parentElement;const box=n=>{const v=n.getBoundingClientRect();return [v.x,v.y,v.width,v.height]};return {color:getComputedStyle(b).color,icon:getComputedStyle(b.querySelector('svg')).fill,tail:Number(getComputedStyle(tail).opacity),time:getComputedStyle(t).visibility,geometry:[r,r.querySelector('.row-title'),r.querySelector('[data-row-actions]'),t,b].map(box),focus:b.matches(':focus-visible'),hover:r.matches(':hover'),buttonHover:b.matches(':hover'),bg:getComputedStyle(b).backgroundColor};})()`);
- const transparent='rgba(0, 0, 0, 0)',foreground='rgb(240, 240, 240)',tertiary='rgb(130, 140, 150)';
- for(const mode of [null,'reading','full-stage','focus',null]){
-  await evaluate(`(async()=>{stop();${mode?`saved={mode:'${mode}'};start();while(document.documentElement.getAttribute('data-gbc-workbench')!=='${mode}')await new Promise(r=>setTimeout(r,10));`:''}})()`);
-  for(const id of ['compact','card']){
-   const label=(mode||'host')+' '+id;
+  const transparent='rgba(0, 0, 0, 0)';
+  // applyTheme changes inline seeds/class/attributes on profile switches. No remount
+  // between these paints: the plugin must keep scoped text and leave host data alone.
+  await evaluate(`(()=>{const p=document.createElement('div');p.id='host-text-probes';p.style.cssText='position:fixed;left:-1000px';for(const c of ['primary','secondary','tertiary','quaternary','foreground']){const n=document.createElement('span');n.className='text-'+c;n.textContent='Host fixture';p.append(n);}document.body.append(p);})()`);
+  for(const mode of [null,'reading','full-stage','focus',null]){
+   await evaluate(`(async()=>{stop();${mode?`saved={mode:'${mode}'};start();while(document.documentElement.getAttribute('data-gbc-workbench')!=='${mode}')await new Promise(r=>setTimeout(r,10));`:''}})()`);
+   await evaluate('window.sessionOwner=globalThis[Symbol.for("gbc.workbench.owner")]');
+   const paints=[['default','dark'],['st-jiuliumei','light'],['bingbing-xiaomei','dark'],['bingbing-xiaomei','light'],['st-jiuliumei','dark']];
+   for(const [paintIndex,[profile,appearance]] of paints.entries()){
+    const hostBefore=await evaluate(`(()=>{const r=document.documentElement;r.style.setProperty('--theme-foreground',${appearance==='light'?"'#18181b'":"'#f0f0f0'"});r.style.setProperty('color-scheme','${appearance}');r.classList.toggle('dark',${appearance==='dark'});r.dataset.hermesMode='${appearance}';r.dataset.hermesTheme='fixture-${profile}';return {style:r.getAttribute('style'),class:r.className,theme:r.dataset.hermesTheme,mode:r.dataset.hermesMode,writes,colors:[...document.querySelectorAll('#host-text-probes span')].map(n=>getComputedStyle(n).color)};})()`);
+    // Let the plugin's normal observer callbacks run; no explicit apply/restart.
+    await evaluate('new Promise(r=>setTimeout(r,30))');
+    const text=await evaluate(`(()=>{const r=document.documentElement,p=document.querySelector('#host-text-probes'),s=document.querySelector('.session-fixture'),kinds=['primary','secondary','tertiary','quaternary','foreground'],nodes=[...s.querySelectorAll('.text-primary,.text-secondary,.text-tertiary,.text-quaternary,.text-foreground,time')],hostColors=[...p.children].map(n=>getComputedStyle(n).color);return {host:{style:r.getAttribute('style'),class:r.className,theme:r.dataset.hermesTheme,mode:r.dataset.hermesMode,writes,colors:hostColors},colors:nodes.map(n=>getComputedStyle(n).color),expectedHostColors:nodes.map(n=>hostColors[n.matches('time')?2:kinds.findIndex(k=>n.classList.contains('text-'+k))]),foreground:getComputedStyle(${mode?"s.querySelector('.text-foreground')":"p.querySelector('.text-foreground')"}).color,tertiary:getComputedStyle(${mode?"s.querySelector('.text-tertiary')":"p.querySelector('.text-tertiary')"}).color};})()`);
+    assert.deepEqual(text.host,hostBefore,'profile paint remains host-owned');
+    if(mode){
+     assert.ok(text.colors.every(c=>c==='rgb(244, 241, 243)'),mode+' '+profile+' '+appearance+' all explicit session text readable: '+text.colors);
+     const ratio=await evaluate(`(()=>{const rgb=s=>s.match(/[0-9.]+/g).map(Number),lum=c=>c.slice(0,3).map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4}).reduce((v,c,i)=>v+c*[.2126,.7152,.0722][i],0);const fg=rgb(getComputedStyle(document.querySelector('.row-title')).color),a=rgb(getComputedStyle(document.querySelector('[data-slot=sidebar-inner]')).backgroundColor),b=rgb(getComputedStyle(document.body).backgroundColor),alpha=a[3]??1,bg=a.slice(0,3).map((v,i)=>v*alpha+b[i]*(1-alpha));return (lum(fg)+.05)/(lum(bg)+.05);})()`);
+     assert.ok(ratio>=4.5,'session text contrast over fixture sidebar/body: '+ratio);
+     assert.equal(await evaluate('globalThis[Symbol.for("gbc.workbench.owner")] === window.sessionOwner'),true,'theme paint does not remount owner');
+    }else assert.deepEqual(text.colors,text.expectedHostColors,'inactive/disposed text uses current host tokens');
+    // Exercise real input in both appearances once per mode. Later paints check
+    // updates on the same owner without repeating identical input sequences.
+    if(paintIndex>1)continue;
+    const {foreground,tertiary}=text;
+   for(const id of ['compact','card']){
+    const label=(mode||'host')+' '+profile+' '+appearance+' '+id;
    await move(350,10);await evaluate('document.activeElement.blur()');await pause();
    const idle=await sample(id);
    assert.equal(idle.tail,1,label+' idle time visible');assert.equal(idle.time,'visible');
@@ -96,10 +120,12 @@ async function checkSessionRows(send,sessionId,evaluate){
    await evaluate(`document.querySelector('#${id} time').focus()`);await key('Tab');state=await sample(id);assert.equal(state.focus,true,label+' keyboard focus-visible');assert.equal(state.icon,foreground,label+' keyboard host color');
    await evaluate(`document.activeElement.blur();document.getElementById('${id}-kebab').dataset.state='open'`);await pause();state=await sample(id);assert.equal(state.focus,false);assert.equal(state.hover,false);assert.equal(state.icon,foreground,label+' open without hover/focus');assert.equal(state.bg,'rgb(60, 70, 80)');
    await evaluate(`document.getElementById('${id}-kebab').dataset.state='closed'`);await pause();assert.equal((await sample(id)).icon,transparent,label+' closed returns idle');
+   }
+   if(mode)assert.equal(await evaluate("getComputedStyle(document.getElementById('native-nav')).color"),'rgb(244, 241, 243)',mode+' ordinary sidebar button readable');
+   }
   }
-  if(mode)assert.equal(await evaluate("getComputedStyle(document.getElementById('native-nav')).color"),'rgb(244, 241, 243)',mode+' ordinary sidebar button readable');
- }
- console.log('Session rows PASS: host, three modes, disposal; compact/card; real hover/Tab, open marker, stable geometry');
+  await evaluate("document.getElementById('host-text-probes').remove();delete window.sessionOwner;document.documentElement.style.removeProperty('--theme-foreground');document.documentElement.style.removeProperty('color-scheme');document.documentElement.classList.remove('dark');delete document.documentElement.dataset.hermesMode;delete document.documentElement.dataset.hermesTheme");
+  console.log('Session rows PASS: light/dark profile paints while mounted, host/three modes/disposal, text contrast; compact/card; real hover/Tab, open marker, stable geometry');
 }
 const probe = `
 (async()=>{
@@ -220,7 +246,7 @@ const probe = `
 })();`;
 // Three-mode peek includes real 900ms pulses and transition endpoints.
 // Budget for fixture completion, real SessionRow input/transition checks and pixels across six viewports.
-const fixtureTimeoutMs=20000, browserTimeoutMs=45000, testTimeoutMs=270000;
+const fixtureTimeoutMs=20000, browserTimeoutMs=90000, testTimeoutMs=540000;
 test('real Chromium glass transmission, geometry and local roster lifecycle',{timeout:testTimeoutMs},async()=>{
  const browser=[process.env.CHROMIUM_PATH, process.env.CONCERT_TEST_BROWSER, process.env.LOCALAPPDATA&&join(process.env.LOCALAPPDATA,'Google/Chrome/Application/chrome.exe'), process.env.ProgramFiles&&join(process.env.ProgramFiles,'Microsoft/Edge/Application/msedge.exe'), process.env.ProgramFiles&&join(process.env.ProgramFiles,'Google/Chrome/Application/chrome.exe'),process.env['ProgramFiles(x86)']&&join(process.env['ProgramFiles(x86)'],'Microsoft/Edge/Application/msedge.exe'),'/usr/bin/chromium','/usr/bin/chromium-browser','/usr/bin/google-chrome','/Applications/Google Chrome.app/Contents/MacOS/Google Chrome','/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge'].find(p=>p&&existsSync(p));
  assert.ok(browser,'Local Chromium required');

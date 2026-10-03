@@ -98,6 +98,12 @@ const CSS = `
 }
 :root[data-gbc-workbench] [data-slot="sidebar"] {
   color: var(--gbc-text);
+  /* Session spans use host tokens directly; profile paints can change their root seeds. */
+  --ui-text-primary: var(--gbc-text);
+  --ui-text-secondary: var(--gbc-text);
+  --ui-text-tertiary: var(--gbc-text);
+  --ui-text-quaternary: var(--gbc-text);
+  --dt-foreground: var(--gbc-text);
 }
 :root[data-gbc-workbench] [data-slot="sidebar"] button:not([data-row-actions] button),
 :root[data-gbc-workbench] [data-slot="sidebar"] [role="tab"],

@@ -22,6 +22,18 @@ This is the bundled derivative wallpaper, **not a product screenshot or evidence
 - Three modes: 演出 (full-stage) for deliberate display; 工作 (reading, default) balances artwork and reading; 安静 (focus) fades the entire wallpaper. Figures embedded in a composite wallpaper cannot be hidden separately.
 - Local image import, scale and position controls; optional separate background and transparent figure mode. Additional images are not included. The settings UI currently uses Chinese.
 
+## Profile-switch sidebar text fix (2026-10-03, source maintenance update)
+
+The host repaints its light/dark palette for each profile. Session titles, previews, workspace labels, and times explicitly consume host text tokens, so GBC's existing sidebar/button color cannot cover those nested elements. This candidate scopes four text levels and the foreground token to the GBC sidebar in all three modes. It does not force a host appearance or change profile preferences or storage. Disabling GBC restores the current host tokens. Native idle-transparent, hover, keyboard-focus, and menu-open rules remain in control of the three-dot button.
+
+The complete five-file suite passed **21/21 with zero failures or skips**, including real Chromium tests for three modes, six sizes, light/dark repaints, compact/card rows, contrast, native menu states, disposal and packaging. The worker sandbox initially failed during GPU startup; an independent run in the normal browser environment passed. The fixture simulates palette updates rather than real bot switching.
+
+On Windows Desktop `v0.21.5+5357`, the backed-up plugin was installed and **Reload desktop plugins** executed. Actual switches between `st-jiuliumei`, `bingbing-xiaomei` and the default profile confirmed readable session text, chat, settings and composer in reading mode, with the wallpaper and five portraits retained. The selected palette persisted when switching away and back. Other modes, keyboard/menu states and disposal have automated coverage, not a repeated full live matrix. macOS/Linux remain untested.
+
+**Two installation layers:** desktop plugins use one app-level root shared by all profiles; do not duplicate plugins per bot. Install the bundled `togenashi-dream.yaml` in each relevant profile's `skins` folder and set `display.skin`. Then actually switch profiles and select **Togenashi-dream** under **Settings → Appearance → Theme**, confirming the saved-profile notice. Opening a bot conversation is not the same as switching profiles; a CLI setting alone does not prove Desktop selected the theme. Upgrade only app-level plugin.js while preserving artwork and storage.
+
+This updates source and documentation only. No new tag/Release or replacement of existing GitHub ZIP assets.
+
 ## preview.3 fix and safe upgrade
 
 The generic sidebar button color overrode the host SessionRow menu button's `text-transparent`, making the three-dot menu visible while idle at its absolute position over the time. preview.3 only excludes buttons inside `[data-row-actions]` from that color rule, restoring host idle, hover, keyboard focus, menu-open states, and the trailing time yielding on hover. Widths, fonts, title space, and time content are unchanged. The preview.2 settings overlay peek fix is retained.

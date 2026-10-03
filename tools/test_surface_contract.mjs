@@ -109,6 +109,24 @@ test('real sidebar navigation uses readable text and an accent active boundary o
   assert.doesNotMatch(css, /data-slot="sidebar-menu-button"/);
 });
 
+test('sidebar owns session text tokens without repainting the host theme or row actions', () => {
+  const tokens = ['--ui-text-primary', '--ui-text-secondary', '--ui-text-tertiary',
+    '--ui-text-quaternary', '--dt-foreground'];
+  const sidebar = style(slot('sidebar'));
+  for (const token of tokens) {
+    assert.equal(sidebar[token], 'var(--gbc-text)', token);
+    assert.equal(style(root)[token], undefined, `${token} must not change other surfaces`);
+    assert.deepEqual(rules.filter(rule => Object.hasOwn(rule.declarations, token))
+      .map(rule => rule.selector), [slot('sidebar')]);
+  }
+  assert.deepEqual(Object.keys(sidebar).sort(), ['background', 'color', ...tokens].sort());
+  assert.ok(!rules.some(rule => rule.selector.includes('data-row-actions') &&
+    !rule.selector.includes('button:not([data-row-actions] button)')),
+  'native text-transparent, hover, focus and open colors remain host-owned');
+  const runtime = source.replace(/const CSS = `[\s\S]*?`;/, '');
+  assert.doesNotMatch(runtime, /localStorage|matchMedia|classList|data-hermes-(?:mode|theme)|--ui-text|--dt-foreground/);
+});
+
 test('reading and focus change consumed dimensions and preserve readable typography', () => {
   const base = rules.find(rule => rule.selector === root).declarations;
   const reading = { ...base, ...style(':root[data-gbc-workbench="reading"]') };
